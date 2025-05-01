@@ -15,7 +15,7 @@ interface Plugin {
 }
 
 const chalk = new Chalk();
-const MODULE_NAME = '[SillyTavern-Example-Plugin]';
+const MODULE_NAME = '[SillyTavern-Koboldcpp-Switcher-Plugin]';
 
 /**
  * Initialize the plugin.
@@ -38,7 +38,7 @@ export async function init(router: Router): Promise<void> {
         }
     });
 
-    console.log(chalk.green(MODULE_NAME), 'Plugin loaded!');
+    console.log(chalk.green(MODULE_NAME), `Plugin loaded!`);
 }
 
 export async function exit(): Promise<void> {
@@ -46,9 +46,9 @@ export async function exit(): Promise<void> {
 }
 
 export const info: PluginInfo = {
-    id: 'example',
-    name: 'Example Plugin',
-    description: 'A simple example plugin for SillyTavern server.',
+    id: 'kobold-switcher',
+    name: 'Koboldcpp Model switch Plugin',
+    description: 'A plugin to reload locally running koboldcpp with different flags.',
 };
 
 const plugin: Plugin = {
