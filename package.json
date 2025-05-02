@@ -1,6 +1,6 @@
 {
     "name": "st-koboldcpp-model-switcher",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "description": "SillyTavern pluign for switching koboldcpp models",
     "main": "dist/plugin.js",
     "type": "commonjs",
@@ -14,7 +14,7 @@
         "type": "git",
         "url": "git+https://github.com/outcatcher/st-koboldcpp-model-switcher.git"
     },
-    "author": "Cohee1207",
+    "author": "outcatcher",
     "license": "AGPL-3.0-or-later",
     "bugs": {
         "url": "https://github.com/outcatcher/st-koboldcpp-model-switcher/issues"
