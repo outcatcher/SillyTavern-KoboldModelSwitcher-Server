@@ -91,8 +91,8 @@ export class Controller {
             .on('error', (err) => {
                 console.warn('koboldcpp returned error:', err.message)
             })
-            .on('exit', (code) => {
-                console.info('koboldcpp existed')
+            .on('exit', () => {
+                console.info('koboldcpp exited')
             })
 
         this.processIO.stdout?.setEncoding('utf-8')
