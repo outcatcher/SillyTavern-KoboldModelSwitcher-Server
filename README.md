@@ -1,5 +1,4 @@
 # Plugin-KoboldCpp-Model-Switcher
 
-Plugin for running LLMs using koboldcpp on sever
-
-Can stop only mamaged koboldcpp instance
+SillyTavern server plugin for running LLMs using KoboldCpp on server
+Topics
