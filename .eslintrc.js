@@ -23,6 +23,7 @@ module.exports = {
         'dist/',
         'out/',
         'bin/',
+        'webpack.config.js',
     ],
     rules: {
         'no-unused-vars': ['error', { args: 'none' }],
@@ -30,7 +31,7 @@ module.exports = {
         'no-constant-condition': ['error', { checkLoops: false }],
         'require-yield': 'off',
         'quotes': ['error', 'single'],
-        'semi': ['error', 'always'],
+        // 'semi': ['error', 'always'],
         'indent': ['error', 4, { SwitchCase: 1, FunctionDeclaration: { parameters: 'first' } }],
         'comma-dangle': ['error', 'always-multiline'],
         'eol-last': ['error', 'always'],
@@ -41,9 +42,9 @@ module.exports = {
         'no-cond-assign': 'error',
 
         // These rules should eventually be enabled.
-        'no-async-promise-executor': 'off',
-        'no-inner-declarations': 'off',
-        '@typescript-eslint/no-namespace': 'off',
-        '@typescript-eslint/no-var-requires': 'off',
+        'no-async-promise-executor': 'error',
+        'no-inner-declarations': 'error',
+        '@typescript-eslint/no-namespace': 'error',
+        '@typescript-eslint/no-var-requires': 'error',
     },
 };
