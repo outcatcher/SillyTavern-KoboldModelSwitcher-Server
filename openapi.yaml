@@ -1,0 +1,54 @@
+openapi: 3.1.0
+info:
+  title: "KoboldCPP Model Switcher"
+  version: 0.1.0
+paths:
+  /model:
+    get:
+      description: Model status
+      responses:
+        "200":
+          description: Running model info
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/modelInfo"
+
+        "500":
+          description: Error requiesting running model from KoboldCpp
+          "$ref": "#/components/responses/errorResponse"
+      tags:
+        - Model Operations
+    post:
+      description: Start or restart KoboldCpp
+      responses:
+        "201":
+          description: KoboldCpp started successfully
+      tags:
+        - Model Operations
+    delete:
+      description: Stop running KoboldCpp instance
+      responses:
+        "201":
+          description: KoboldCpp stopped successfully
+      tags:
+        - Model Operations
+components:
+  responses:
+    errorResponse:
+      description: Response with error message
+      content:
+        "application/json":
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                description: error message
+  schemas:
+    modelInfo:
+      type: object
+      properties:
+        model:
+          type: string
+          example: "nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S"

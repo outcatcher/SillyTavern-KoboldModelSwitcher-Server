@@ -92,7 +92,7 @@ export class Controller {
                 console.warn('koboldcpp returned error:', err.message)
             })
             .on('exit', (code) => {
-                console.info('koboldcpp existed with code', code)
+                console.info('koboldcpp existed')
             })
 
         this.processIO.stdout?.setEncoding('utf-8')
@@ -107,7 +107,7 @@ export class Controller {
 
             stdOutLine.
                 split('\n').
-                map((line) => console.error(chalk.grey(MODULE_NAME), '[KoboldCpp]', line))
+                map((line) => console.info(chalk.grey(MODULE_NAME), '[KoboldCpp]', line))
 
             stdOutLine = ''
         });

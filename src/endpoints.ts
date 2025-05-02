@@ -56,4 +56,20 @@ export class Handlers {
 
         return res.status(204).send()
     }
+
+    openApiYaml: RequestHandler = (_, res) => {
+        return res.sendFile('openapi.yaml', { root: `${__dirname}/..` })
+    }
+
+    redoc: RequestHandler = (req, res) => {
+        const htmlBody = '<html><body>' +
+            `<redoc spec-url="${req.baseUrl}/openapi.yaml"></redoc>` +
+            '<script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>' +
+            '</html>'
+
+        return res
+            .status(200)
+            .setHeader('content-type', 'text/html')
+            .send(htmlBody)
+    }
 }

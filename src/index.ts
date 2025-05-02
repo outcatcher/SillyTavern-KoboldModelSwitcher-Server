@@ -31,7 +31,10 @@ class KoboldRunnerPlugin {
         router.get('/probe', (_, res) => {
             return res.sendStatus(204);
         });
-        // Use body-parser to parse the request body
+        // doc
+        router.get('/redoc', this.handlers.redoc)
+        router.get('/openapi.yaml', this.handlers.openApiYaml)
+        // models
         router.get('/model', this.handlers.getRunningModel);
         router.post('/model', this.jsonParser, this.handlers.postModel);
         router.delete('/model', this.jsonParser, this.handlers.deleteModel);
