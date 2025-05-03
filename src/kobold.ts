@@ -1,11 +1,16 @@
 import { ChildProcess, spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { availableParallelism } from 'os';
+import sanitize from 'sanitize-filename';
 import { MODULE_NAME, chalk } from './consts';
 
 const koboldAPIEndpoint = 'http://127.0.0.1:5001/api/v1' //todo: take from current connection if possible
 const basePath = '/e/ll_models'  // todo: fix
-const binaryRelativePath = './koboldcpp-linux-x64-cuda1210' // constant for now, arbitrary values are insecure
+const binaryRelativePathMap = new Map<string, string>([
+    ['win32', './koboldcpp_cu12.exe'],
+    ['linux', './koboldcpp-linux-x64-cuda1210'],
+    ['darwin', './koboldcpp-mac-arm64']
+]) // constant for now, arbitrary values are insecure
 
 interface KoboldCppArgs {
     binaryPath?: string // will be ignored for now
@@ -19,8 +24,8 @@ interface KoboldCppArgs {
 const defaultArgs = ['--quiet', '--flashattention', '--usemlock', '--usecublas', 'all']
 
 function toArgsArray(args: KoboldCppArgs): Array<string> {
-    const result = defaultArgs.concat(
-        '--model', args.model,
+    const execArgs = defaultArgs.concat(
+        '--model', sanitize(args.model),
         '--threads', (args.threads ?? availableParallelism()).toString(),
     )
 
@@ -29,26 +34,25 @@ function toArgsArray(args: KoboldCppArgs): Array<string> {
             throw new Error('unsupported context size')
         }
 
-        result.push('--contextsize', args.contextSize.toString())
+        execArgs.push('--contextsize', args.contextSize.toString())
     }
 
     if (args.gpuLayers !== undefined) {
-        result.push('--gpulayers', args.gpuLayers.toString())
+        execArgs.push('--gpulayers', args.gpuLayers.toString())
     }
 
     if (args.tensorSplit !== undefined) {
-        result.push('--gpulayers', args.tensorSplit.toString())
+        execArgs.push('--gpulayers', args.tensorSplit.toString())
     }
 
     if (args.tensorSplit !== undefined) {
-        result.push('--tensor_split', ...args.tensorSplit.map(String))
+        execArgs.push('--tensor_split', ...args.tensorSplit.map(String))
     }
 
+    // making sure none of execArgs contains spaces
+    execArgs.map((v) => v.split(' ')).flat()
 
-    // todo: make sure none of execArgs contains spaces
-    result.map((v) => v.split(' ')).flat()
-
-    return result
+    return execArgs
 }
 
 
@@ -92,16 +96,25 @@ export class Controller {
 
         this.aborter = new AbortController()
 
-        if (!existsSync(basePath + '/' + binaryRelativePath)) {
+        const binaryRelativePath = binaryRelativePathMap.get(process.platform)
+
+        if (binaryRelativePath === undefined || !existsSync(basePath + '/' + binaryRelativePath)) {
             throw new Error('binary missing')
         }
 
-        this.processIO = spawn(binaryRelativePath, toArgsArray(args), {
-            cwd: basePath,
-            detached: true,
-            signal: this.aborter.signal,
-            stdio: ['ignore', 'pipe', 'pipe'],
-        })
+        const strArgs = toArgsArray(args)
+
+        console.info(chalk.yellow(MODULE_NAME), 'Binary will be started at', binaryRelativePath, 'with flags', strArgs)
+
+        this.processIO = spawn(
+            binaryRelativePath!,
+            strArgs,
+            {
+                cwd: basePath,
+                detached: true,
+                signal: this.aborter.signal,
+                stdio: ['ignore', 'pipe', 'pipe'],
+            })
             .on('error', (err) => {
                 console.warn('koboldcpp returned error:', err.message)
             })
