@@ -10150,76 +10150,6 @@ module.exports = safer
 
 /***/ }),
 
-/***/ "./node_modules/sanitize-filename/index.js":
-/*!*************************************************!*\
-  !*** ./node_modules/sanitize-filename/index.js ***!
-  \*************************************************/
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-/*jshint node:true*/
-
-
-/**
- * Replaces characters in strings that are illegal/unsafe for filenames.
- * Unsafe characters are either removed or replaced by a substitute set
- * in the optional `options` object.
- *
- * Illegal Characters on Various Operating Systems
- * / ? < > \ : * | "
- * https://kb.acronis.com/content/39790
- *
- * Unicode Control codes
- * C0 0x00-0x1f & C1 (0x80-0x9f)
- * http://en.wikipedia.org/wiki/C0_and_C1_control_codes
- *
- * Reserved filenames on Unix-based systems (".", "..")
- * Reserved filenames in Windows ("CON", "PRN", "AUX", "NUL", "COM1",
- * "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
- * "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", and
- * "LPT9") case-insesitively and with or without filename extensions.
- *
- * Capped at 255 characters in length.
- * http://unix.stackexchange.com/questions/32795/what-is-the-maximum-allowed-filename-and-folder-size-with-ecryptfs
- *
- * @param  {String} input   Original filename
- * @param  {Object} options {replacement: String | Function }
- * @return {String}         Sanitized filename
- */
-
-var truncate = __webpack_require__(/*! truncate-utf8-bytes */ "./node_modules/truncate-utf8-bytes/index.js");
-
-var illegalRe = /[\/\?<>\\:\*\|"]/g;
-var controlRe = /[\x00-\x1f\x80-\x9f]/g;
-var reservedRe = /^\.+$/;
-var windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
-var windowsTrailingRe = /[\. ]+$/;
-
-function sanitize(input, replacement) {
-  if (typeof input !== 'string') {
-    throw new Error('Input must be string');
-  }
-  var sanitized = input
-    .replace(illegalRe, replacement)
-    .replace(controlRe, replacement)
-    .replace(reservedRe, replacement)
-    .replace(windowsReservedRe, replacement)
-    .replace(windowsTrailingRe, replacement);
-  return truncate(sanitized, 255);
-}
-
-module.exports = function (input, options) {
-  var replacement = (options && options.replacement) || '';
-  var output = sanitize(input, replacement);
-  if (replacement === '') {
-    return output;
-  }
-  return sanitize(output, '');
-};
-
-
-/***/ }),
-
 /***/ "./node_modules/set-function-length/index.js":
 /*!***************************************************!*\
   !*** ./node_modules/set-function-length/index.js ***!
@@ -10641,76 +10571,6 @@ function toIdentifier (str) {
 
 /***/ }),
 
-/***/ "./node_modules/truncate-utf8-bytes/index.js":
-/*!***************************************************!*\
-  !*** ./node_modules/truncate-utf8-bytes/index.js ***!
-  \***************************************************/
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-"use strict";
-
-
-var truncate = __webpack_require__(/*! ./lib/truncate */ "./node_modules/truncate-utf8-bytes/lib/truncate.js");
-var getLength = Buffer.byteLength.bind(Buffer);
-module.exports = truncate.bind(null, getLength);
-
-
-/***/ }),
-
-/***/ "./node_modules/truncate-utf8-bytes/lib/truncate.js":
-/*!**********************************************************!*\
-  !*** ./node_modules/truncate-utf8-bytes/lib/truncate.js ***!
-  \**********************************************************/
-/***/ ((module) => {
-
-"use strict";
-
-
-function isHighSurrogate(codePoint) {
-  return codePoint >= 0xd800 && codePoint <= 0xdbff;
-}
-
-function isLowSurrogate(codePoint) {
-  return codePoint >= 0xdc00 && codePoint <= 0xdfff;
-}
-
-// Truncate string by size in bytes
-module.exports = function truncate(getLength, string, byteLength) {
-  if (typeof string !== "string") {
-    throw new Error("Input must be string");
-  }
-
-  var charLength = string.length;
-  var curByteLength = 0;
-  var codePoint;
-  var segment;
-
-  for (var i = 0; i < charLength; i += 1) {
-    codePoint = string.charCodeAt(i);
-    segment = string[i];
-
-    if (isHighSurrogate(codePoint) && isLowSurrogate(string.charCodeAt(i + 1))) {
-      i += 1;
-      segment += string[i];
-    }
-
-    curByteLength += getLength(segment);
-
-    if (curByteLength === byteLength) {
-      return string.slice(0, i + 1);
-    }
-    else if (curByteLength > byteLength) {
-      return string.slice(0, i - segment.length + 1);
-    }
-  }
-
-  return string;
-};
-
-
-
-/***/ }),
-
 /***/ "./src/consts.ts":
 /*!***********************!*\
   !*** ./src/consts.ts ***!
@@ -10792,10 +10652,10 @@ class Handlers {
             return res.sendFile('openapi.yaml', { root: `${__dirname}/..` });
         };
         this.redoc = (req, res) => {
-            const htmlBody = `<html><body>
-        <redoc spec-url="${req.baseUrl}/openapi.yaml"></redoc>
-        <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>
-        </html>`;
+            const htmlBody = '<html><body>' +
+                `<redoc spec-url="${req.baseUrl}/openapi.yaml"></redoc>` +
+                '<script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>' +
+                '</html>';
             return res
                 .status(200)
                 .setHeader('content-type', 'text/html')
@@ -10891,20 +10751,38 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getLoadedModelName = exports.Controller = void 0;
 const child_process_1 = __webpack_require__(/*! child_process */ "child_process");
 const fs_1 = __webpack_require__(/*! fs */ "fs");
 const os_1 = __webpack_require__(/*! os */ "os");
-const sanitize_filename_1 = __importDefault(__webpack_require__(/*! sanitize-filename */ "./node_modules/sanitize-filename/index.js"));
 const consts_1 = __webpack_require__(/*! ./consts */ "./src/consts.ts");
 const koboldAPIEndpoint = 'http://127.0.0.1:5001/api/v1'; //todo: take from current connection if possible
 const basePath = '/e/ll_models'; // todo: fix
 const binaryRelativePath = './koboldcpp-linux-x64-cuda1210'; // constant for now, arbitrary values are insecure
 const defaultArgs = ['--quiet', '--flashattention', '--usemlock', '--usecublas', 'all'];
+function toArgsArray(args) {
+    var _a;
+    const result = defaultArgs.concat('--model', args.model, '--threads', ((_a = args.threads) !== null && _a !== void 0 ? _a : (0, os_1.availableParallelism)()).toString());
+    if (args.contextSize !== undefined) {
+        if (!allowedContextSizes.includes(args.contextSize)) {
+            throw new Error('unsupported context size');
+        }
+        result.push('--contextsize', args.contextSize.toString());
+    }
+    if (args.gpuLayers !== undefined) {
+        result.push('--gpulayers', args.gpuLayers.toString());
+    }
+    if (args.tensorSplit !== undefined) {
+        result.push('--gpulayers', args.tensorSplit.toString());
+    }
+    if (args.tensorSplit !== undefined) {
+        result.push('--tensor_split', ...args.tensorSplit.map(String));
+    }
+    // todo: make sure none of execArgs contains spaces
+    result.map((v) => v.split(' ')).flat();
+    return result;
+}
 const allowedContextSizes = [
     256,
     512,
@@ -10947,17 +10825,7 @@ class Controller {
             if (!(0, fs_1.existsSync)(basePath + '/' + binaryRelativePath)) {
                 throw new Error('binary missing');
             }
-            args.threads = args.threads ? args.threads : (0, os_1.availableParallelism)();
-            if (!allowedContextSizes.includes(args.contextSize)) {
-                throw new Error('unsupported context size');
-            }
-            let execArgs = defaultArgs.concat('--contextsize', args.contextSize.toString(), '--gpulayers', args.gpuLayers.toString(), '--model', (0, sanitize_filename_1.default)(args.model), '--threads', args.threads.toString());
-            if (args.tensorSplit) {
-                execArgs.push('--tensor_split', ...args.tensorSplit.map(String));
-            }
-            // todo: make sure none of execArgs contains spaces
-            execArgs = execArgs.map((v) => v.split(' ')).flat();
-            this.processIO = (0, child_process_1.spawn)(binaryRelativePath, execArgs, {
+            this.processIO = (0, child_process_1.spawn)(binaryRelativePath, toArgsArray(args), {
                 cwd: basePath,
                 detached: true,
                 signal: this.aborter.signal,
@@ -10966,8 +10834,8 @@ class Controller {
                 .on('error', (err) => {
                 console.warn('koboldcpp returned error:', err.message);
             })
-                .on('exit', (code) => {
-                console.info('koboldcpp existed with code', code);
+                .on('exit', () => {
+                console.info('koboldcpp exited');
             });
             (_a = this.processIO.stdout) === null || _a === void 0 ? void 0 : _a.setEncoding('utf-8');
             let stdOutLine = '';
@@ -10978,7 +10846,7 @@ class Controller {
                 }
                 stdOutLine.
                     split('\n').
-                    map((line) => console.error(consts_1.chalk.grey(consts_1.MODULE_NAME), '[KoboldCpp]', line));
+                    map((line) => console.info(consts_1.chalk.grey(consts_1.MODULE_NAME), '[KoboldCpp]', line));
                 stdOutLine = '';
             });
             (_c = this.processIO.stderr) === null || _c === void 0 ? void 0 : _c.setEncoding('utf-8');

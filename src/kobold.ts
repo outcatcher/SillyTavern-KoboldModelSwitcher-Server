@@ -1,7 +1,6 @@
 import { ChildProcess, spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { availableParallelism } from 'os';
-import sanitize from 'sanitize-filename';
 import { MODULE_NAME, chalk } from './consts';
 
 const koboldAPIEndpoint = 'http://127.0.0.1:5001/api/v1' //todo: take from current connection if possible
@@ -9,15 +8,49 @@ const basePath = '/e/ll_models'  // todo: fix
 const binaryRelativePath = './koboldcpp-linux-x64-cuda1210' // constant for now, arbitrary values are insecure
 
 interface KoboldCppArgs {
-    // binaryPath: string // will be ignored for now
-    contextSize: number
-    gpuLayers: number
+    binaryPath?: string // will be ignored for now
     model: string
-    threads: number
-    tensorSplit: Array<number>
+    contextSize?: number
+    gpuLayers?: number
+    threads?: number
+    tensorSplit?: Array<number>
 }
 
 const defaultArgs = ['--quiet', '--flashattention', '--usemlock', '--usecublas', 'all']
+
+function toArgsArray(args: KoboldCppArgs): Array<string> {
+    const result = defaultArgs.concat(
+        '--model', args.model,
+        '--threads', (args.threads ?? availableParallelism()).toString(),
+    )
+
+    if (args.contextSize !== undefined) {
+        if (!allowedContextSizes.includes(args.contextSize)) {
+            throw new Error('unsupported context size')
+        }
+
+        result.push('--contextsize', args.contextSize.toString())
+    }
+
+    if (args.gpuLayers !== undefined) {
+        result.push('--gpulayers', args.gpuLayers.toString())
+    }
+
+    if (args.tensorSplit !== undefined) {
+        result.push('--gpulayers', args.tensorSplit.toString())
+    }
+
+    if (args.tensorSplit !== undefined) {
+        result.push('--tensor_split', ...args.tensorSplit.map(String))
+    }
+
+
+    // todo: make sure none of execArgs contains spaces
+    result.map((v) => v.split(' ')).flat()
+
+    return result
+}
+
 
 const allowedContextSizes = [
     256,
@@ -63,26 +96,7 @@ export class Controller {
             throw new Error('binary missing')
         }
 
-        args.threads = args.threads ? args.threads : availableParallelism()
-        if (!allowedContextSizes.includes(args.contextSize)) {
-            throw new Error('unsupported context size')
-        }
-
-        let execArgs = defaultArgs.concat(
-            '--contextsize', args.contextSize.toString(),
-            '--gpulayers', args.gpuLayers.toString(),
-            '--model', sanitize(args.model),
-            '--threads', args.threads.toString(),
-        )
-
-        if (args.tensorSplit) {
-            execArgs.push('--tensor_split', ...args.tensorSplit.map(String))
-        }
-
-        // todo: make sure none of execArgs contains spaces
-        execArgs = execArgs.map((v) => v.split(' ')).flat()
-
-        this.processIO = spawn(binaryRelativePath, execArgs, {
+        this.processIO = spawn(binaryRelativePath, toArgsArray(args), {
             cwd: basePath,
             detached: true,
             signal: this.aborter.signal,

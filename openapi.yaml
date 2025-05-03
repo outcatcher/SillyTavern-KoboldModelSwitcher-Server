@@ -21,6 +21,11 @@ paths:
         - Model Operations
     post:
       description: Start or restart KoboldCpp
+      requestBody:
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/modelRun"
       responses:
         "201":
           description: KoboldCpp started successfully
@@ -29,7 +34,7 @@ paths:
     delete:
       description: Stop running KoboldCpp instance
       responses:
-        "201":
+        "204":
           description: KoboldCpp stopped successfully
       tags:
         - Model Operations
@@ -46,6 +51,69 @@ components:
                 type: string
                 description: error message
   schemas:
+    modelRun:
+      type: object
+      properties:
+        model:
+          type: string
+          description: Relative path to the model GGUF file to be run
+          example: nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S.gguf
+        binaryPath:
+          type: string
+          description: Relative path to koboldcpp executable (now ignored)
+          example: koboldcpp-linux-x64-cuda1210
+        contextSize:
+          type: number
+          enum:
+            - 256
+            - 512
+            - 1024
+            - 2048
+            - 3072
+            - 4096
+            - 6144
+            - 8192
+            - 10240
+            - 12288
+            - 14336
+            - 16384
+            - 20480
+            - 24576
+            - 28672
+            - 32768
+            - 40960
+            - 49152
+            - 57344
+            - 65536
+            - 81920
+            - 98304
+            - 114688
+            - 131072
+        gpuLayers:
+          type: number
+          description: Number of layers to offload to GPU
+          example: 12288
+        threads:
+          type: number
+          description: Threads to be used on CPU (1 is enough if model is fully offloaded to GPU)
+          example: 81
+        tensorSplit:
+          type: array
+          description: Tensor split for multi-GPU setups
+          example: [29, 52]
+          items:
+            type: number
+      required:
+        - model
+      example:
+        {
+          "binaryPath": "koboldcpp-linux-x64-cuda1210",
+          "contextSize": 12288,
+          "gpuLayers": 81,
+          "model": "nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S.gguf",
+          "threads": 1,
+          "tensorSplit": [29, 52],
+        }
     modelInfo:
       type: object
       properties:
