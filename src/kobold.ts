@@ -42,10 +42,6 @@ function toArgsArray(args: KoboldCppArgs): Array<string> {
     }
 
     if (args.tensorSplit !== undefined) {
-        execArgs.push('--gpulayers', args.tensorSplit.toString())
-    }
-
-    if (args.tensorSplit !== undefined) {
         execArgs.push('--tensor_split', ...args.tensorSplit.map(String))
     }
 
