@@ -9,7 +9,7 @@ const basePath = '/e/ll_models'  // todo: fix
 const binaryRelativePathMap = new Map<string, string>([
     ['win32', './koboldcpp_cu12.exe'],
     ['linux', './koboldcpp-linux-x64-cuda1210'],
-    ['darwin', './koboldcpp-mac-arm64']
+    ['darwin', './koboldcpp-mac-arm64'],
 ]) // constant for now, arbitrary values are insecure
 
 interface KoboldCppArgs {
