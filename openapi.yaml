@@ -3,6 +3,22 @@ info:
   title: "KoboldCPP Model Switcher"
   version: 0.1.0
 paths:
+  /probe:
+    get:
+      description: Check plugin status
+      responses:
+        "204":
+          description: Plugin is running
+      tags:
+        - Plugin info
+  /redoc:
+    get:
+      description: Get API documentation
+      responses:
+        "200":
+          description: Returns ReDoc for plugin API
+      tags:
+        - Plugin info
   /model:
     get:
       description: Model status
