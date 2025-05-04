@@ -1,8 +1,10 @@
-import bodyParser from 'body-parser';
+import { json } from 'body-parser';
 import { Router } from 'express';
+import { body, checkSchema } from 'express-validator';
 import { chalk, MODULE_NAME } from './consts';
 import { Handlers } from './endpoints';
 import { Controller } from './kobold';
+import { modelSchema } from './validators';
 
 
 interface PluginInfo {
@@ -18,7 +20,6 @@ class KoboldRunnerPlugin {
         description: 'A plugin to reload locally running koboldcpp with different flags.',
     };
 
-    jsonParser = bodyParser.json()
     controller = new Controller()
     handlers = new Handlers(this.controller)
 
@@ -27,17 +28,19 @@ class KoboldRunnerPlugin {
     * @param router Express Router
     */
     init = async (router: Router) => {
+        const pluginRouter = router.use(json())
+
         // Used to check if the server plugin is running
-        router.get('/probe', (_, res) => {
+        pluginRouter.get('/probe', (_, res) => {
             return res.sendStatus(204);
         });
         // doc
-        router.get('/redoc', this.handlers.redoc)
-        router.get('/openapi.yaml', this.handlers.openApiYaml)
+        pluginRouter.get('/redoc', this.handlers.redoc)
+        pluginRouter.get('/openapi.yaml', this.handlers.openApiYaml)
         // models
-        router.get('/model', this.handlers.getRunningModel);
-        router.post('/model', this.jsonParser, this.handlers.postModel);
-        router.delete('/model', this.jsonParser, this.handlers.deleteModel);
+        pluginRouter.get('/model', this.handlers.getRunningModel);
+        pluginRouter.post('/model', checkSchema(modelSchema, ['body']), this.handlers.postModel);
+        pluginRouter.delete('/model', this.handlers.deleteModel);
 
         console.log(chalk.green(MODULE_NAME), 'Plugin loaded!');
     }

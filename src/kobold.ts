@@ -52,7 +52,7 @@ function toArgsArray(args: KoboldCppArgs): Array<string> {
 }
 
 
-const allowedContextSizes = [
+export const allowedContextSizes = [
     256,
     512,
     1024,
@@ -83,6 +83,7 @@ const allowedContextSizes = [
 export class Controller {
     private aborter?: AbortController
     private processIO: ChildProcess | null = null
+    private isProcessRunning: boolean = false
 
     // startKoboldCpp starts koboldcpp executable and wait before it responds.
     async runKoboldCpp(args: KoboldCppArgs) {
@@ -112,11 +113,15 @@ export class Controller {
                 stdio: ['ignore', 'pipe', 'pipe'],
             })
             .on('error', (err) => {
+                this.isProcessRunning = false
                 console.warn('koboldcpp returned error:', err.message)
             })
             .on('exit', () => {
+                this.isProcessRunning = false
                 console.info('koboldcpp exited')
             })
+
+        this.isProcessRunning = true
 
         this.processIO.stdout?.setEncoding('utf-8')
 
@@ -152,15 +157,18 @@ export class Controller {
             stdErrLine = ''
         });
 
-        while (1) {  // wait for model to be available
+        while (this.isProcessRunning) {  // wait for model to be available
             try {
                 await getLoadedModelName()
+
+                return
             } catch {
                 continue
             }
-
-            break
         }
+
+        // this.isProcessRunning is false
+        throw new Error('Failed to run KoboldCpp')
     }
 
     async stopKoboldCpp() {
@@ -172,7 +180,7 @@ export class Controller {
 
         console.info('Start waiting for Kobold to stop...')
 
-        while (1) {  // wait for process ot be aborted
+        while (this.isProcessRunning) {  // wait for process ot be aborted
             try {
                 await getLoadedModelName()
             } catch {
@@ -180,6 +188,7 @@ export class Controller {
             }
         }
 
+        this.isProcessRunning = false
         this.processIO = null
 
         console.info('KoboldCpp execution stopped')
