@@ -8,9 +8,14 @@ import { allowedContextSizes } from "./kobold";
 //     "tensorSplit": [29, 52],
 //   }
 export const modelSchema = {
+    model: {
+        notEmpty: {
+            errorMessage: 'model is required',
+        },
+    },
     contextSize: {
         isIn: {
-            errorMessage: `unsupported context size, must be one of ${allowedContextSizes}`,
+            errorMessage: `contextSize must be one of [${allowedContextSizes}]`,
             options: [allowedContextSizes],
         }
     },
