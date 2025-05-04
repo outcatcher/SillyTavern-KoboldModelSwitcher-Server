@@ -1,6 +1,6 @@
 import { json } from 'body-parser';
 import { Router } from 'express';
-import { body, checkSchema } from 'express-validator';
+import { checkSchema } from 'express-validator';
 import { chalk, MODULE_NAME } from './consts';
 import { Handlers } from './endpoints';
 import { Controller } from './kobold';

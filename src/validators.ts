@@ -1,4 +1,4 @@
-import { allowedContextSizes } from "./kobold";
+import { allowedContextSizes } from './kobold';
 
 //  {
 //     "contextSize": 12288,
@@ -17,7 +17,7 @@ export const modelSchema = {
         isIn: {
             errorMessage: `contextSize must be one of [${allowedContextSizes}]`,
             options: [allowedContextSizes],
-        }
+        },
     },
     gpuLayers: {
         isInt: {
@@ -33,7 +33,7 @@ export const modelSchema = {
             options: {
                 min: 0,
             },
-        }
+        },
     },
     'tensorSplit.*': {
         isFloat: {
@@ -41,6 +41,6 @@ export const modelSchema = {
             options: {
                 min: 0,
             },
-        }
-    }
+        },
+    },
 }
