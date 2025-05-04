@@ -29,7 +29,9 @@ paths:
             "application/json":
               schema:
                 "$ref": "#/components/schemas/modelInfo"
-
+        "400":
+          description: Error in requiest body
+          "$ref": "#/components/responses/errorResponse"
         "500":
           description: Error requiesting running model from KoboldCpp
           "$ref": "#/components/responses/errorResponse"
