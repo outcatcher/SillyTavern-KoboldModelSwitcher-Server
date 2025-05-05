@@ -74,6 +74,13 @@ export class Controller {
     private processIO: ChildProcess | null = null
     private isProcessRunning = false
 
+    private gracefulShutdown = false
+    private shutdownErr: string | null = null
+
+    get shutdownError(): string | null {
+        return this.shutdownErr
+    }
+
     // StartKoboldCpp starts koboldcpp executable and wait before it responds.
     async runKoboldCpp(args: KoboldCppArgs) {
         if (this.processIO !== null) {
@@ -122,11 +129,23 @@ export class Controller {
             })
             .on('error', (err) => {
                 this.isProcessRunning = false
+
                 globalThis.console.warn('koboldcpp returned error:', err.message)
             })
-            .on('exit', () => {
+            .on('exit', (code, signal) => {
                 this.isProcessRunning = false
-                globalThis.console.info('koboldcpp exited')
+
+                if (code !== null) {
+                    globalThis.console.info('koboldcpp, PID', this.processIO?.pid, 'exited with code', code)
+                }
+
+                if (signal !== null && !this.gracefulShutdown) {
+                    this.shutdownErr = signal
+
+                    globalThis.console.info('koboldcpp, PID', this.processIO?.pid, 'shut down by', signal)
+                }
+
+                this.processIO = null
             })
 
         this.isProcessRunning = true
@@ -142,6 +161,8 @@ export class Controller {
 
         this.aborter?.abort()
 
+        this.gracefulShutdown = true
+
         globalThis.console.info('Waiting for Kobold to stop...')
 
         const waitIntervalMs = 100
@@ -152,8 +173,6 @@ export class Controller {
             // eslint-disable-next-line no-await-in-loop
             await new Promise(resolve => { setTimeout(resolve, waitIntervalMs) });
         }
-
-        this.processIO = null
     }
 }
 

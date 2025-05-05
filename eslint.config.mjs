@@ -37,6 +37,7 @@ export default tseslint.config(
             'no-unused-vars': 'off',
             // Let's trust in humanity
             'no-undefined': 'off',
+            'arrow-body-style': ['error', 'as-needed', { 'requireReturnForObjectLiteral': true }]
         },
         plugins: {
             'simple-import-sort': simpleImportSort,

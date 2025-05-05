@@ -29,15 +29,9 @@ paths:
             "application/json":
               schema:
                 "$ref": "#/components/schemas/modelInfo"
-        "400":
-          description: Error in requiest body
-          "$ref": "#/components/responses/errorResponse"
-        "500":
-          description: Error requiesting running model from KoboldCpp
-          "$ref": "#/components/responses/errorResponse"
       tags:
         - Model Operations
-    post:
+    put:
       description: Start or restart KoboldCpp
       requestBody:
         content:
@@ -47,6 +41,9 @@ paths:
       responses:
         "201":
           description: KoboldCpp started successfully
+        "400":
+          description: Error in requiest body
+          "$ref": "#/components/responses/errorResponse"
       tags:
         - Model Operations
     delete:
@@ -137,4 +134,16 @@ components:
       properties:
         model:
           type: string
+          description: Name of the currently loaded model
           example: "nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S"
+        status:
+          type: string
+          description: Status of the LLM loaded by Kobold
+          example: online
+          enum: ["offline", "loading", "online", "stopping", "failed"]
+        error:
+          type: string
+          example: SIGTERM
+          description: Details of execution error
+      required:
+        - status

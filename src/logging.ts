@@ -57,7 +57,12 @@ export const logStream = (stream: internal.Readable | null, level: number): inte
 
         output.
             split('\n').
-            forEach((line) => { log?.log(log.chalk(MODULE_NAME), '[KoboldCpp]', line) })
+            forEach((line) => { 
+                if (line === '') {
+                    return
+                }
+                log?.log(log.chalk(MODULE_NAME, '[KoboldCpp]'), line) 
+            })
 
         logLine = logLine.substring(pos)
     });
