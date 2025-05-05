@@ -38,7 +38,7 @@ class KoboldRunnerPlugin {
         pluginRouter.get('/redoc', Handlers.redoc)
         pluginRouter.get('/openapi.yaml', Handlers.openApiYaml)
         // Models
-        pluginRouter.get('/model', Handlers.getRunningModel);
+        pluginRouter.get('/model', this.handlers.getRunningModel);
         pluginRouter.post('/model', checkSchema(modelSchema, ['body']), this.handlers.postModel);
         pluginRouter.delete('/model', this.handlers.deleteModel);
 
