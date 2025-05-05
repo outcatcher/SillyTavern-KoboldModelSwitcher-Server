@@ -1,4 +1,4 @@
-import { allowedContextSizes } from './kobold';
+import { allowedContextSizes } from './consts';
 
 //  {
 //     "contextSize": 12288,
@@ -8,14 +8,9 @@ import { allowedContextSizes } from './kobold';
 //     "tensorSplit": [29, 52],
 //   }
 export const modelSchema = {
-    model: {
-        notEmpty: {
-            errorMessage: 'model is required',
-        },
-    },
     contextSize: {
         isIn: {
-            errorMessage: `contextSize must be one of [${allowedContextSizes}]`,
+            errorMessage: `contextSize must be one of [${allowedContextSizes.join(', ')}]`,
             options: [allowedContextSizes],
         },
     },
@@ -27,17 +22,22 @@ export const modelSchema = {
             },
         },
     },
-    threads: {
-        isInt: {
-            errorMessage: 'threads must be positive integer',
-            options: {
-                min: 0,
-            },
+    model: {
+        notEmpty: {
+            errorMessage: 'model is required',
         },
     },
     'tensorSplit.*': {
         isFloat: {
             errorMessage: 'tensor split values must be valid floats',
+            options: {
+                min: 0,
+            },
+        },
+    },
+    threads: {
+        isInt: {
+            errorMessage: 'threads must be positive integer',
             options: {
                 min: 0,
             },

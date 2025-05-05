@@ -1,12 +1,14 @@
 import chalk from 'chalk';
 import { RequestHandler } from 'express';
-import { validationResult } from 'express-validator';
+import { ValidationError, validationResult } from 'express-validator';
+import { StatusCodes } from 'http-status-codes';
+
 import { MODULE_NAME } from './consts';
-import { Controller, getLoadedModelName } from './kobold';
+import { Controller, getLoadedModelName, KoboldCppArgs } from './kobold';
 
 interface getRunningModelResponse {
-    model: string | undefined
-    error: string | undefined
+    model?: string
+    error?: string
 }
 
 export class Handlers {
@@ -16,17 +18,17 @@ export class Handlers {
         this.controller = controller
     }
 
-    getRunningModel: RequestHandler = async (_, res) => {
-        let status = 200
-        const data: getRunningModelResponse = { model: undefined, error: undefined }
+    static getRunningModel: RequestHandler = async (_, res) => {
+        let status = StatusCodes.OK
+        const data: getRunningModelResponse = {}
 
         await getLoadedModelName()
-            .then(name => data.model = name)
-            .catch(err => {
+            .then(name => { data.model = name })
+            .catch((err: unknown) => {
                 data.error = 'error requesting koboldcpp running model'
-                status = 500
-                console.error(chalk.redBright(MODULE_NAME), 'KoboldCpp unavailable')
-                console.error(err)
+                status = StatusCodes.INTERNAL_SERVER_ERROR
+                globalThis.console.error(chalk.redBright(MODULE_NAME), 'KoboldCpp unavailable')
+                globalThis.console.error(err)
             })
 
         return res.status(status).json(data)
@@ -35,25 +37,23 @@ export class Handlers {
     postModel: RequestHandler = async (req, res) => {
         const result = validationResult(req);
         if (!result.isEmpty()) {
-            return res.status(400).json({
+            return res.status(StatusCodes.BAD_REQUEST).json({
                 error: result
-                    .formatWith(err => err.msg)
+                    .formatWith((err: ValidationError) => err.msg as string )
                     .array(),
             })
         }
 
-        await this
+        return await this
             .controller
-            .runKoboldCpp(req.body)
-            .then(() => {
-                return res.status(201).send()
-            })
+            .runKoboldCpp(req.body as KoboldCppArgs)
+            .then(() => res.status(StatusCodes.CREATED).send())
             .catch(
-                (err) => {
-                    console.error(chalk.redBright(MODULE_NAME), 'KoboldCpp unavailable')
-                    console.error(err)
+                (err: unknown) => {
+                    globalThis.console.error(chalk.redBright(MODULE_NAME), 'KoboldCpp unavailable')
+                    globalThis.console.error(err)
 
-                    return res.status(500).json({ error: 'error starting koboldcpp' })
+                    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'error starting koboldcpp' })
                 },
             )
     }
@@ -62,23 +62,22 @@ export class Handlers {
         await this
             .controller
             .stopKoboldCpp()
-            .catch(/* well, no luck */)
+            // Well, no luck
+            .catch()
 
-        return res.status(204).send()
+        return res.status(StatusCodes.NO_CONTENT).send()
     }
 
-    openApiYaml: RequestHandler = (_, res) => {
-        return res.sendFile('openapi.yaml', { root: `${__dirname}/..` })
-    }
+    static openApiYaml: RequestHandler = (_, res) => { res.sendFile('openapi.yaml', { root: `${__dirname}/..` }) }
 
-    redoc: RequestHandler = (req, res) => {
+    static redoc: RequestHandler = (req, res) => {
         const htmlBody = '<html><body>' +
             `<redoc spec-url="${req.baseUrl}/openapi.yaml"></redoc>` +
             '<script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>' +
             '</html>'
 
         return res
-            .status(200)
+            .status(StatusCodes.OK)
             .setHeader('content-type', 'text/html')
             .send(htmlBody)
     }
