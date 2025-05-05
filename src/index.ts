@@ -1,7 +1,9 @@
 import { json } from 'body-parser';
 import { Router } from 'express';
 import { checkSchema } from 'express-validator';
-import { chalk, MODULE_NAME } from './consts';
+import { StatusCodes } from 'http-status-codes';
+
+import { chalk,MODULE_NAME } from './consts';
 import { Handlers } from './endpoints';
 import { Controller } from './kobold';
 import { modelSchema } from './validators';
@@ -27,28 +29,26 @@ class KoboldRunnerPlugin {
     * Initialize the plugin.
     * @param router Express Router
     */
-    init = async (router: Router) => {
+    init = (router: Router) => {
         const pluginRouter = router.use(json())
 
         // Used to check if the server plugin is running
-        pluginRouter.get('/probe', (_, res) => {
-            return res.sendStatus(204);
-        });
-        // doc
-        pluginRouter.get('/redoc', this.handlers.redoc)
-        pluginRouter.get('/openapi.yaml', this.handlers.openApiYaml)
-        // models
-        pluginRouter.get('/model', this.handlers.getRunningModel);
+        pluginRouter.get('/probe', (_, res) => res.sendStatus(StatusCodes.NO_CONTENT));
+        // Doc
+        pluginRouter.get('/redoc', Handlers.redoc)
+        pluginRouter.get('/openapi.yaml', Handlers.openApiYaml)
+        // Models
+        pluginRouter.get('/model', Handlers.getRunningModel);
         pluginRouter.post('/model', checkSchema(modelSchema, ['body']), this.handlers.postModel);
         pluginRouter.delete('/model', this.handlers.deleteModel);
 
-        console.log(chalk.green(MODULE_NAME), 'Plugin loaded!');
+        globalThis.console.log(chalk.green(MODULE_NAME), 'Plugin loaded!');
     }
 
     exit = async () => {
         await this.controller.stopKoboldCpp()
 
-        console.log(chalk.yellow(MODULE_NAME), 'Plugin exited');
+        globalThis.console.log(chalk.yellow(MODULE_NAME), 'Plugin exited');
     }
 }
 
