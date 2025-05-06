@@ -1,15 +1,33 @@
-import chalk from 'chalk';
-import { RequestHandler } from 'express';
+import { RequestHandler, Response } from 'express';
 import { ValidationError, validationResult } from 'express-validator';
 import { StatusCodes } from 'http-status-codes';
 
-import { MODULE_NAME } from './consts';
-import { Controller, getLoadedModelName, KoboldCppArgs } from './kobold';
+import { ModelState } from './consts';
+import { ModelStateError } from './errors';
+import { Controller, KoboldCppArgs } from './kobold';
 
 interface getRunningModelResponse {
-    status: 'offline' | 'loading' | 'online' | 'stopping' | 'failed'
+    status: ModelState
     model?: string
     error?: string
+}
+
+const handleError = (response: Response, error: unknown): Response => {
+    if (error instanceof ModelStateError) {
+        return response
+            .status(StatusCodes.CONFLICT)
+            .json({ error: error.message })
+    }
+
+    if (error instanceof Error) {
+        return response
+            .status(StatusCodes.INTERNAL_SERVER_ERROR)
+            .json({ error: error.message })
+    }
+
+    return response
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .json({ error })
 }
 
 export class Handlers {
@@ -19,61 +37,46 @@ export class Handlers {
         this.controller = controller
     }
 
-    getRunningModel: RequestHandler = async (_, res) => {
-        const data = await getLoadedModelName()
-            .then((name: string): getRunningModelResponse => { return { status: 'online', model: name } })
-            .catch((err: unknown): getRunningModelResponse => {
-                globalThis.console.info(chalk.white(MODULE_NAME, 'KoboldCpp unavailable', err))
+    getRunningModel: RequestHandler = async (_, res) => await this
+        .controller
+        .getModelStatus()
+        .then(status => {
+            const data: getRunningModelResponse = {
+                status: status.State,
+                model: status.Name,
+                error: status.ErrorMsg
+            }
 
-                if (this.controller.shutdownError !== null) {
-                    return {
-                        status: 'failed',
-                        error: this.controller.shutdownError,
-                    }
-                }
-
-                return {
-                    status: 'offline',
-                }
-            })
-
-        return res.json(data)
-
-    }
+            return res.json(data)
+        })
+        .catch((err: unknown) => handleError(res, err))
 
     postModel: RequestHandler = async (req, res) => {
         const result = validationResult(req);
         if (!result.isEmpty()) {
-            return res.status(StatusCodes.BAD_REQUEST).json({
-                error: result
-                    .formatWith((err: ValidationError) => err.msg as string)
-                    .array(),
-            })
+            const errMsg = result
+                .formatWith((err: ValidationError) => err.msg as string)
+                .array()
+
+            return res.status(StatusCodes.BAD_REQUEST).json({ error: errMsg })
         }
+
+        const fiveSeconds = 5000
 
         return await this
             .controller
-            .runKoboldCpp(req.body as KoboldCppArgs)
-            .then(() => res.status(StatusCodes.CREATED).send())
-            .catch(
-                (err: unknown) => {
-                    globalThis.console.error(chalk.redBright(MODULE_NAME), 'KoboldCpp unavailable')
-                    globalThis.console.error(err)
-
-                    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'error starting koboldcpp' })
-                },
-            )
-    }
-
-    deleteModel: RequestHandler = async (_, res) => {
-        await this
-            .controller
             .stopKoboldCpp()
-            // Well, no luck
-            .catch()
-
-        return res.status(StatusCodes.NO_CONTENT).send()
+            .then(() => this.controller.waitForOneOfModelStates(['offline', 'failed'], fiveSeconds))
+            .then(() => { this.controller.runKoboldCpp(req.body as KoboldCppArgs) })
+            .then(() => res.status(StatusCodes.CREATED).send())
+            .catch((err: unknown) => handleError(res, err))
     }
+
+    deleteModel: RequestHandler = async (_, res) => await this
+        .controller
+        .stopKoboldCpp()
+        .then(() => res.status(StatusCodes.NO_CONTENT).send())
+        .catch((err: unknown) => handleError(res, err))
 
     static openApiYaml: RequestHandler = (_, res) => { res.sendFile('openapi.yaml', { root: `${__dirname}/..` }) }
 

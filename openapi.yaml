@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: "KoboldCPP Model Switcher"
-  version: 0.2.0-pre.1
+  version: 0.2.0-pre.2
 paths:
   /probe:
     get:
@@ -21,7 +21,8 @@ paths:
         - Plugin info
   /model:
     get:
-      description: Model status
+      summary: Get model status
+      description: Returns details about running model
       responses:
         "200":
           description: Running model info
@@ -32,7 +33,14 @@ paths:
       tags:
         - Model Operations
     put:
-      description: Start or restart KoboldCpp
+      summary: Start or restart KoboldCpp with given model
+      description: |
+        Initiate start or restart of KoboldCpp. Changes status to `loading`.
+
+        This is non-blocking operation though if there is a loaded model,
+        operation will be blocked until old model is deleted.
+
+        You have to wait for status to reach `online` to make sure koboldcpp accept connections.
       requestBody:
         content:
           "application/json":
@@ -44,13 +52,23 @@ paths:
         "400":
           description: Error in requiest body
           "$ref": "#/components/responses/errorResponse"
+        "409":
+          description: Current model status forbids creation
+          "$ref": "#/components/responses/errorResponse"
       tags:
         - Model Operations
     delete:
-      description: Stop running KoboldCpp instance
+      summary: Stop managed KoboldCpp
+      description: |
+        Initialize stopping KoboldCpp instance. Changes status to `stopping`.
+
+        You have to wait for status to reach `offline` to make sure koboldcpp is down.
       responses:
         "204":
           description: KoboldCpp stopped successfully
+        "409":
+          description: Current model status forbids deletion
+          "$ref": "#/components/responses/errorResponse"
       tags:
         - Model Operations
 components:
@@ -60,12 +78,17 @@ components:
       content:
         "application/json":
           schema:
-            type: object
-            properties:
-              error:
-                type: string
-                description: error message
+            "$ref": "#/components/schemas/errorResponse"
+
   schemas:
+    errorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: error message
+      required:
+        - error
     modelRun:
       type: object
       properties:
@@ -131,6 +154,12 @@ components:
         }
     modelInfo:
       type: object
+      description: Info about currently running model
+      example:
+        {
+          "status": "online",
+          "model": "nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S",
+        }
       properties:
         model:
           type: string

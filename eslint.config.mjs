@@ -10,6 +10,8 @@ export default tseslint.config(
             'dist/*',
             'webpack.config.js',
         ],
+    },
+    {
         extends: [
             eslint.configs.all,
         ],
@@ -19,8 +21,8 @@ export default tseslint.config(
             'max-lines-per-function': 'warn',
             // Ugly
             'one-var': 'off',
-            // Yes console. SillyTavern is using    
-            // 'no-console': 'off',
+            // Ha-ha, ternary power
+            'no-ternary': 'off',
             // Sort by meaning
             'sort-keys': 'off',
             // Better imports with fixs
@@ -37,7 +39,7 @@ export default tseslint.config(
             'no-unused-vars': 'off',
             // Let's trust in humanity
             'no-undefined': 'off',
-            'arrow-body-style': ['error', 'as-needed', { 'requireReturnForObjectLiteral': true }]
+            'arrow-body-style': ['error', 'as-needed', { 'requireReturnForObjectLiteral': true }],
         },
         plugins: {
             'simple-import-sort': simpleImportSort,
@@ -45,9 +47,8 @@ export default tseslint.config(
         },
     },
     {
-        ignores: [
-            '**/*.js',
-            '**/*.mjs',
+        files: [
+            '**/*.ts'
         ],
         extends: [
             tseslint.configs.strictTypeChecked,

@@ -38,3 +38,5 @@ export const LOG_LEVELS = {
     WARN: 2,
     ERROR: 3,
 }
+
+export type ModelState = 'offline' | 'loading' | 'online' | 'stopping' | 'failed'
