@@ -3,8 +3,10 @@ import { existsSync } from 'fs';
 import { availableParallelism } from 'os';
 import sanitize from 'sanitize-filename';
 
-import { allowedContextSizes, chalk, LOG_LEVELS, MODULE_NAME } from './consts';
+import { allowedContextSizes, chalk, LOG_LEVELS, ModelState, MODULE_NAME } from './consts';
+import { ModelStateError } from './errors';
 import { logStream } from './logging';
+import { sleep, timeout } from './timers';
 
 // Todo: make definable
 const basePath = '/e/ll_models',
@@ -56,123 +58,188 @@ const toArgsArray = (args: KoboldCppArgs): string[] => {
     return execArgs
 }
 
-
-export const getLoadedModelName = async () => {
-    const resp = await fetch(`${koboldAPIEndpoint}/model`, { method: 'GET' })
-    const data = await resp.json() as { result: string }
-
-    // Do koboldcpp/nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S => nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S
-    const [_, modeName] = data.result.split('/')
-
-    return modeName
+interface ModelStatus {
+    State: ModelState
+    Name?: string
+    ErrorMsg?: string
+    // Model started by another process
+    Independent: boolean
 }
 
+const isModelOffline = (state: ModelState): boolean => ['offline', 'stopping', 'failed'].includes(state)
+
+const isModelChangingState = (state: ModelState): boolean => ['loading', 'stopping'].includes(state)
 
 // Controller stores current execution status.
 export class Controller {
     private aborter?: AbortController
     private processIO: ChildProcess | null = null
-    private isProcessRunning = false
 
-    private gracefulShutdown = false
-    private shutdownErr: string | null = null
+    private modelStatus: ModelStatus
 
-    get shutdownError(): string | null {
-        return this.shutdownErr
+    constructor() {
+        this.modelStatus = { State: 'offline', Independent: false }
+    }
+
+    // Shutdown intiated by Controller
+    get gracefulShutdown(): boolean {
+        return this.modelStatus.State === 'stopping'
     }
 
     // StartKoboldCpp starts koboldcpp executable and wait before it responds.
-    async runKoboldCpp(args: KoboldCppArgs) {
-        if (this.processIO !== null) {
-            await this.stopKoboldCpp()
-        }
-
+    runKoboldCpp(args: KoboldCppArgs) {
         const binaryRelativePath = binaryRelativePathMap.get(process.platform)
 
         if (binaryRelativePath === undefined || !existsSync(`${basePath}/${binaryRelativePath}`)) {
             throw new Error('binary missing')
         }
 
-        this.spawnKoboldCpp(binaryRelativePath, toArgsArray(args))
-
-        let acceptingConnections = false
-
-        // Wait for model to be available. this.isProcessRunning is set asyncronously
-        while (this.isProcessRunning && !acceptingConnections) {
-            // eslint-disable-next-line no-await-in-loop
-            acceptingConnections = await getLoadedModelName()
-                .then(() => true)
-                .catch(() => false)
-        }
-
-        if (!this.isProcessRunning) {
-            throw new Error('Failed to run KoboldCpp')
-        }
-    }
-
-    private spawnKoboldCpp = (binaryPath: string, args: string[]) => {
         globalThis.console.info(
             chalk.yellow(MODULE_NAME),
-            'Binary will be started at', binaryPath, 'with flags', args,
+            'Binary will be started at', binaryRelativePath, 'with flags', args,
         )
 
         this.aborter = new AbortController()
 
         this.processIO = spawn(
-            binaryPath,
-            args,
+            binaryRelativePath,
+            toArgsArray(args),
             {
                 cwd: basePath,
                 detached: true,
                 signal: this.aborter.signal,
                 stdio: ['ignore', 'pipe', 'pipe'],
             })
-            .on('error', (err) => {
-                this.isProcessRunning = false
-
-                globalThis.console.warn('koboldcpp returned error:', err.message)
-            })
-            .on('exit', (code, signal) => {
-                this.isProcessRunning = false
-
-                if (code !== null) {
-                    globalThis.console.info('koboldcpp, PID', this.processIO?.pid, 'exited with code', code)
-                }
-
-                if (signal !== null && !this.gracefulShutdown) {
-                    this.shutdownErr = signal
-
-                    globalThis.console.info('koboldcpp, PID', this.processIO?.pid, 'shut down by', signal)
-                }
-
-                this.processIO = null
-            })
-
-        this.isProcessRunning = true
+            .on('error', this.handleChildErr)
+            .on('exit', this.handleChildExit)
 
         this.processIO.stdout = logStream(this.processIO.stdout, LOG_LEVELS.INFO)
         this.processIO.stderr = logStream(this.processIO.stderr, LOG_LEVELS.ERROR)
+
+        const modelName = args.model.substring(0, args.model.lastIndexOf('.'))
+
+        this.modelStatus = { Name: modelName, State: 'loading', Independent: false }
+    }
+
+    private handleChildErr = (err: Error) => {
+        // We keep model name
+        this.modelStatus.State = this.gracefulShutdown ? 'offline' : 'failed'
+        this.modelStatus.ErrorMsg = err.message
+
+        globalThis.console.info(chalk.yellow(MODULE_NAME, '[KoboldCpp]'), 'returned error:', err.message, err.stack)
+    }
+
+    private handleChildExit = (code: number | null, signal: NodeJS.Signals | null) => {
+        if (code !== null) {
+            this.modelStatus.ErrorMsg = code.toString()
+
+            // Impossible, as koboldcpp shouldn't exit normally
+            globalThis.console.warn(chalk.yellow(MODULE_NAME, '[KoboldCpp]'),
+                this.processIO?.pid, 'exited with code', code)
+        }
+
+        if (signal !== null) {
+            this.modelStatus.ErrorMsg = signal
+
+            globalThis.console.info(chalk.grey(MODULE_NAME, '[KoboldCpp]'),
+                this.processIO?.pid, 'shut down by', signal)
+        }
+
+        this.modelStatus.State = this.gracefulShutdown ? 'offline' : 'failed'
     }
 
     async stopKoboldCpp() {
-        if (this.processIO === null) {
+        await this.syncWithKobold()
+
+        if (isModelOffline(this.modelStatus.State)) {
+            // Shut down is being already performed
             return
+        }
+
+        if (isModelChangingState(this.modelStatus.State)) {
+            throw new ModelStateError('Model in creation. Deletion impossible')
+        }
+
+        if (this.modelStatus.Independent) {
+            throw new ModelStateError('Running model is not managed by controller')
         }
 
         this.aborter?.abort()
 
-        this.gracefulShutdown = true
+        this.modelStatus.State = 'stopping'
+    }
 
-        globalThis.console.info('Waiting for Kobold to stop...')
+    private async syncWithKobold() {
+        // Failure here is highly unexpected if model already started.
+        await fetch(`${koboldAPIEndpoint}/model`, { method: 'GET' })
+            .then(resp => {
+                if (!resp.ok) {
+                    return Promise.reject(
+                        new Error(`requiest unsuccessfull, received code ${resp.status.toString()} (${resp.statusText})`)
+                    )
+                }
 
-        const waitIntervalMs = 100
+                return resp.json()
+            })
+            .then((data: { result: string }) => {
+                const [_, modelName] = data.result.split('/')
 
-        // Wait for process ot be aborted
-        while (this.isProcessRunning) {
-            // Sleep for 100ms before recheck
-            // eslint-disable-next-line no-await-in-loop
-            await new Promise(resolve => { setTimeout(resolve, waitIntervalMs) });
+                // Refresh name, model seems to be started independently
+                if (this.modelStatus.Name !== modelName) {
+                    globalThis.console.warn(
+                        chalk.yellow(MODULE_NAME, 'Unexpected model name, expected'),
+                        this.modelStatus.Name, 'got', modelName)
+
+                    this.modelStatus.Name = modelName
+                    this.modelStatus.Independent = true
+                }
+
+                this.modelStatus.State = 'online'
+            })
+            .catch((err: unknown) => {
+                if (isModelOffline(this.modelStatus.State) || isModelChangingState(this.modelStatus.State)) {
+                    // Exected, return
+                    return
+                }
+
+                globalThis.console.info('failed to fetch model from kobold, expected status', err)
+
+                this.modelStatus.State = 'failed'
+                this.modelStatus.ErrorMsg = 'kobold is unexpectedly down'
+            });
+    }
+
+    async getModelStatus() {
+        return await this
+            .syncWithKobold()
+            .then(() => this.modelStatus)
+    }
+
+    async waitForOneOfModelStates(states: ModelState[], timeoutMs: number) {
+        const waitItervalMs = 200
+
+        const waitForModel = async () => {
+            const currentState = (await this.getModelStatus()).State
+
+            if (states.includes(currentState)) {
+                return
+            }
+
+            // Sleep x_x
+            await sleep(waitItervalMs)
+
+            await waitForModel()
         }
+
+        await Promise.race([
+            waitForModel(),
+            timeout(timeoutMs),
+        ])
+    }
+
+    // End of controller workflow
+    shutdown() {
+        this.aborter?.abort()
     }
 }
 
