@@ -1,6 +1,4 @@
-import { json } from 'body-parser';
-import { NextHandleFunction } from 'connect';
-import { Router } from 'express';
+import { RequestHandler, Router } from 'express';
 import { checkSchema } from 'express-validator';
 import { StatusCodes } from 'http-status-codes';
 
@@ -16,7 +14,7 @@ interface PluginInfo {
     description: string;
 }
 
-const logRequest: NextHandleFunction = (req, resp, next) => {
+const logRequest: RequestHandler = (req, resp, next) => {
     globalThis.console.log(chalk.white(MODULE_NAME, 'Request', req.method, req.url))
 
     next()
@@ -43,7 +41,8 @@ class KoboldRunnerPlugin {
     * @param router Express Router
     */
     init = (router: Router) => {
-        const pluginRouter = router.use(json(), logRequest)
+        // json parsed by ST base router
+        const pluginRouter = router.use(logRequest)
 
         // Used to check if the server plugin is running
         pluginRouter.get('/probe', (_, res) => res.status(StatusCodes.NO_CONTENT).send());
