@@ -41,7 +41,7 @@ class KoboldRunnerPlugin {
     * @param router Express Router
     */
     init = (router: Router) => {
-        // json parsed by ST base router
+        // JSON parsed by ST base router
         const pluginRouter = router.use(logRequest)
 
         // Used to check if the server plugin is running
