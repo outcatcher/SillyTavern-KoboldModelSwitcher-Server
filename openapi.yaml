@@ -51,7 +51,7 @@ paths:
           description: KoboldCpp started successfully
         "400":
           description: Error in requiest body
-          "$ref": "#/components/responses/errorResponse"
+          "$ref": "#/components/responses/multipleErrorResponse"
         "409":
           description: Current model status forbids creation
           "$ref": "#/components/responses/errorResponse"
@@ -79,7 +79,12 @@ components:
         "application/json":
           schema:
             "$ref": "#/components/schemas/errorResponse"
-
+    multipleErrorResponse:
+      description: Response with multiple error messages
+      content:
+        "application/json":
+          schema:
+            "$ref": "#/components/schemas/multipleErrorResponse"
   schemas:
     errorResponse:
       type: object
@@ -89,6 +94,16 @@ components:
           description: error message
       required:
         - error
+    multipleErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          description: error messages
+          items:
+            type: string
+      required:
+        - errors
     modelRun:
       type: object
       properties:

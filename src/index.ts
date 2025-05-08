@@ -1,10 +1,11 @@
-import { RequestHandler, Router } from 'express';
+import { Router } from 'express';
 import { checkSchema } from 'express-validator';
 import { StatusCodes } from 'http-status-codes';
 
 import { chalk, MODULE_NAME } from './consts';
 import { Handlers } from './endpoints';
 import { Controller } from './kobold';
+import { handleErrors, logRequest } from './middlewares';
 import { modelSchema } from './validators';
 
 
@@ -14,17 +15,6 @@ interface PluginInfo {
     description: string;
 }
 
-const logRequest: RequestHandler = (req, resp, next) => {
-    globalThis.console.log(chalk.white(MODULE_NAME, 'Request', req.method, req.url))
-
-    next()
-
-    resp.on('finish', () => {
-        globalThis.console.log(
-            chalk.white(MODULE_NAME, 'Response', req.method, req.url, resp.statusCode)
-        );
-    })
-}
 
 class KoboldRunnerPlugin {
     info: PluginInfo = {
@@ -53,6 +43,8 @@ class KoboldRunnerPlugin {
         pluginRouter.get('/model', this.handlers.getRunningModel);
         pluginRouter.put('/model', checkSchema(modelSchema, ['body']), this.handlers.postModel);
         pluginRouter.delete('/model', this.handlers.deleteModel);
+
+        pluginRouter.use(handleErrors)
 
         globalThis.console.log(chalk.green(MODULE_NAME), 'Plugin loaded!');
     }

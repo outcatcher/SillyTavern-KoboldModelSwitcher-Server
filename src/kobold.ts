@@ -70,6 +70,10 @@ const isModelOffline = (state: ModelState): boolean => ['offline', 'stopping', '
 
 const isModelChangingState = (state: ModelState): boolean => ['loading', 'stopping'].includes(state)
 
+const knownKoboldRC = new Map([
+    [3, 'failed to load model']
+])
+
 // Controller stores current execution status.
 export class Controller {
     private aborter?: AbortController
@@ -131,9 +135,9 @@ export class Controller {
 
     private handleChildExit = (code: number | null, signal: NodeJS.Signals | null) => {
         if (code !== null) {
-            this.modelStatus.ErrorMsg = code.toString()
+            this.modelStatus.ErrorMsg = knownKoboldRC.get(code) ?? code.toString()
 
-            // Impossible, as koboldcpp shouldn't exit normally
+            // Exit only possible with non-zero code, e.g. if koboldcpp failed to start
             globalThis.console.warn(chalk.yellow(MODULE_NAME, '[KoboldCpp]'),
                 this.processIO?.pid, 'exited with code', code)
         }
