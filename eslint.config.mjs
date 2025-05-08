@@ -40,6 +40,7 @@ export default tseslint.config(
             // Let's trust in humanity
             'no-undefined': 'off',
             'arrow-body-style': ['error', 'as-needed', { 'requireReturnForObjectLiteral': true }],
+            'max-params': ['error', { max: 4 }],
         },
         plugins: {
             'simple-import-sort': simpleImportSort,

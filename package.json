@@ -1,5 +1,5 @@
 {
-    "name": "st-koboldcpp-model-switcher",
+    "name": "sillytavern-koboldmodelswitcher-server",
     "version": "0.2.0-pre.3",
     "description": "SillyTavern pluign for switching koboldcpp models",
     "main": "dist/plugin.js",
@@ -12,14 +12,14 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/outcatcher/st-koboldcpp-model-switcher.git"
+        "url": "git+https://github.com/outcatcher/SillyTavern-KoboldModelSwitcher-Server.git"
     },
     "author": "outcatcher",
     "license": "AGPL-3.0-or-later",
     "bugs": {
-        "url": "https://github.com/outcatcher/st-koboldcpp-model-switcher/issues"
+        "url": "https://github.com/outcatcher/SillyTavern-KoboldModelSwitcher-Server/issues"
     },
-    "homepage": "https://github.com/outcatcher/st-koboldcpp-model-switcher#readme",
+    "homepage": "https://github.com/outcatcher/SillyTavern-KoboldModelSwitcher-Server#readme",
     "devDependencies": {
         "@eslint/js": "^9.26.0",
         "@stylistic/eslint-plugin": "^4.2.0",

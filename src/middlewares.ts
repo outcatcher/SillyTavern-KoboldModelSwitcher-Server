@@ -17,7 +17,7 @@ export const logRequest: RequestHandler = (req, resp, next) => {
 }
 
 
-export const handleErrors: ErrorRequestHandler = (error, _, response) => {
+export const handleErrors: ErrorRequestHandler = (error, _req, response, _next) => {
     switch (true) {
         case error instanceof RequestValidationError:
             return response

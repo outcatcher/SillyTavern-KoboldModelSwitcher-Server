@@ -1,21 +1,21 @@
 import { ChildProcess, spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { availableParallelism } from 'os';
+import path from 'path';
 import sanitize from 'sanitize-filename';
 
+import { config } from './config';
 import { allowedContextSizes, chalk, knownKoboldRC, LOG_LEVELS, ModelState, MODULE_NAME } from './consts';
 import { ModelStateError } from './errors';
 import { logStream } from './logging';
 import { sleep, timeout } from './timers';
 
-// Todo: make definable
-const basePath = '/e/ll_models',
+const
     binaryRelativePathMap = new Map<string, string>([
         ['win32', './koboldcpp_cu12.exe'],
         ['linux', './koboldcpp-linux-x64-cuda1210'],
         ['darwin', './koboldcpp-mac-arm64'],
     ]),
-    //Todo: take from current connection if possible
     koboldAPIEndpoint = 'http://127.0.0.1:5001/api/v1'
 
 export interface KoboldCppArgs {
@@ -90,7 +90,7 @@ export class Controller {
     runKoboldCpp(args: KoboldCppArgs) {
         const binaryRelativePath = binaryRelativePathMap.get(process.platform)
 
-        if (binaryRelativePath === undefined || !existsSync(`${basePath}/${binaryRelativePath}`)) {
+        if (binaryRelativePath === undefined || !existsSync(path.join(config.basePath, binaryRelativePath))) {
             throw new Error('binary missing')
         }
 
@@ -105,7 +105,7 @@ export class Controller {
             binaryRelativePath,
             toArgsArray(args),
             {
-                cwd: basePath,
+                cwd: config.basePath,
                 detached: true,
                 signal: this.aborter.signal,
                 stdio: ['ignore', 'pipe', 'pipe'],
