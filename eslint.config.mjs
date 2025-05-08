@@ -56,8 +56,8 @@ export default tseslint.config(
         ],
         rules: {
             '@typescript-eslint/no-unused-vars': ['error', {
-                argsIgnorePattern: '_',
-                varsIgnorePattern: '_',
+                argsIgnorePattern: '_+',
+                varsIgnorePattern: '_+',
             }],
             // Too stupid of async, only false-positives so far
             '@typescript-eslint/no-unnecessary-condition': 'off'

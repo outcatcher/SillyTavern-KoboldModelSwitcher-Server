@@ -40,3 +40,7 @@ export const LOG_LEVELS = {
 }
 
 export type ModelState = 'offline' | 'loading' | 'online' | 'stopping' | 'failed'
+
+export const knownKoboldRC = new Map([
+    [3, 'failed to load model']
+])

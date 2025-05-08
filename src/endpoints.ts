@@ -40,12 +40,12 @@ export class Handlers {
                 .formatWith((err: ValidationError) => err.msg as string)
                 .array()
 
-            return next(new RequestValidationError(errMsg))
+            next(new RequestValidationError(errMsg)); return;
         }
 
         const fiveSeconds = 5000
 
-        return await this
+        await this
             .controller
             .stopKoboldCpp()
             .then(() => this.controller.waitForOneOfModelStates(['offline', 'failed'], fiveSeconds))
@@ -60,17 +60,17 @@ export class Handlers {
         .then(() => res.status(StatusCodes.NO_CONTENT).send())
         .catch(next)
 
-    static openApiYaml: RequestHandler = (_, res) => { res.sendFile('openapi.yaml', { root: `${__dirname}/..` }) }
+    static openApiYaml: RequestHandler = (_, res) =>
+        { res.
+            sendFile('openapi.yaml', { root: `${__dirname}/..` }); };
 
-    static redoc: RequestHandler = (req, res) => {
-        const htmlBody = '<html><body>' +
-            `<redoc spec-url="${req.baseUrl}/openapi.yaml"></redoc>` +
-            '<script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>' +
-            '</html>'
 
-        return res
-            .status(StatusCodes.OK)            
+    static redoc: RequestHandler = (req, res) =>
+        res
+            .status(StatusCodes.OK)
             .setHeader('content-type', 'text/html')
-            .send(htmlBody)
-    }
+            .send('<html><body>' +
+                `<redoc spec-url="${req.baseUrl}/openapi.yaml"></redoc>` +
+                '<script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>' +
+                '</html>')
 }

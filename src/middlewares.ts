@@ -1,5 +1,6 @@
 import { ErrorRequestHandler, RequestHandler } from "express";
 import { StatusCodes } from "http-status-codes";
+
 import { chalk, MODULE_NAME } from "./consts";
 import { ModelStateError, RequestValidationError } from "./errors";
 
@@ -16,7 +17,7 @@ export const logRequest: RequestHandler = (req, resp, next) => {
 }
 
 
-export const handleErrors: ErrorRequestHandler = (error, request, response, next) => {
+export const handleErrors: ErrorRequestHandler = (error, _, response) => {
     switch (true) {
         case error instanceof RequestValidationError:
             return response
@@ -33,6 +34,7 @@ export const handleErrors: ErrorRequestHandler = (error, request, response, next
         default:
             return response
                 .status(StatusCodes.INTERNAL_SERVER_ERROR)
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 .json({ error })
     }
 }

@@ -3,7 +3,7 @@ import { existsSync } from 'fs';
 import { availableParallelism } from 'os';
 import sanitize from 'sanitize-filename';
 
-import { allowedContextSizes, chalk, LOG_LEVELS, ModelState, MODULE_NAME } from './consts';
+import { allowedContextSizes, chalk, knownKoboldRC, LOG_LEVELS, ModelState, MODULE_NAME } from './consts';
 import { ModelStateError } from './errors';
 import { logStream } from './logging';
 import { sleep, timeout } from './timers';
@@ -69,10 +69,6 @@ interface ModelStatus {
 const isModelOffline = (state: ModelState): boolean => ['offline', 'stopping', 'failed'].includes(state)
 
 const isModelChangingState = (state: ModelState): boolean => ['loading', 'stopping'].includes(state)
-
-const knownKoboldRC = new Map([
-    [3, 'failed to load model']
-])
 
 // Controller stores current execution status.
 export class Controller {
