@@ -3,7 +3,7 @@ import { existsSync } from 'fs';
 import { availableParallelism } from 'os';
 import sanitize from 'sanitize-filename';
 
-import { allowedContextSizes, chalk, LOG_LEVELS, ModelState, MODULE_NAME } from './consts';
+import { allowedContextSizes, chalk, knownKoboldRC, LOG_LEVELS, ModelState, MODULE_NAME } from './consts';
 import { ModelStateError } from './errors';
 import { logStream } from './logging';
 import { sleep, timeout } from './timers';
@@ -131,9 +131,9 @@ export class Controller {
 
     private handleChildExit = (code: number | null, signal: NodeJS.Signals | null) => {
         if (code !== null) {
-            this.modelStatus.ErrorMsg = code.toString()
+            this.modelStatus.ErrorMsg = knownKoboldRC.get(code) ?? code.toString()
 
-            // Impossible, as koboldcpp shouldn't exit normally
+            // Exit only possible with non-zero code, e.g. if koboldcpp failed to start
             globalThis.console.warn(chalk.yellow(MODULE_NAME, '[KoboldCpp]'),
                 this.processIO?.pid, 'exited with code', code)
         }
