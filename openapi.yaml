@@ -170,11 +170,11 @@ components:
     modelInfo:
       type: object
       description: Info about currently running model
-      example:
-        {
-          "status": "online",
-          "model": "nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S",
-        }
+      examples:
+        - status: "online"
+          model: "nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S"
+        - status: "failed"
+          error: "failed to load model"
       properties:
         model:
           type: string
