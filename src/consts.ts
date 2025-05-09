@@ -39,8 +39,17 @@ export const LOG_LEVELS = {
     ERROR: 3,
 }
 
-export type ModelState = 'offline' | 'loading' | 'online' | 'stopping' | 'failed'
+export type ModelState = 'offline' | 'loading' | 'online' | 'stopping' | 'error'
 
-export const knownKoboldRC = new Map([
+
+export const isModelChangingState = (state: ModelState): boolean => ['loading', 'stopping'].includes(state),
+    isModelOffline = (state: ModelState): boolean => ['offline', 'stopping', 'error'].includes(state)
+
+export const binaryRelativePathMap = new Map<string, string>([
+    ['win32', './koboldcpp_cu12.exe'],
+    ['linux', './koboldcpp-linux-x64-cuda1210'],
+    ['darwin', './koboldcpp-mac-arm64'],
+]), knownKoboldRC = new Map([
     [3, 'failed to load model']
-])
+]),
+    koboldAPIEndpoint = 'http://127.0.0.1:5001/api/v1'

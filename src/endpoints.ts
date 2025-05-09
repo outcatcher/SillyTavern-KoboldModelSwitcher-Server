@@ -43,13 +43,9 @@ export class Handlers {
             next(new RequestValidationError(errMsg)); return;
         }
 
-        const fiveSeconds = 5000
-
         await this
             .controller
-            .stopKoboldCpp()
-            .then(() => this.controller.waitForOneOfModelStates(['offline', 'failed'], fiveSeconds))
-            .then(() => { this.controller.runKoboldCpp(req.body as KoboldCppArgs) })
+            .runKoboldCpp(req.body as KoboldCppArgs)
             .then(() => res.status(StatusCodes.CREATED).send())
             .catch(next)
     }
@@ -60,9 +56,10 @@ export class Handlers {
         .then(() => res.status(StatusCodes.NO_CONTENT).send())
         .catch(next)
 
-    static openApiYaml: RequestHandler = (_, res) =>
-        { res.
-            sendFile('openapi.yaml', { root: `${__dirname}/..` }); };
+    static openApiYaml: RequestHandler = (_, res) => {
+        res.
+            sendFile('openapi.yaml', { root: `${__dirname}/..` });
+    };
 
 
     static redoc: RequestHandler = (req, res) =>
