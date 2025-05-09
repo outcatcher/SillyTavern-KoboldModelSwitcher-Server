@@ -181,7 +181,7 @@ components:
       examples:
         - status: "online"
           model: "nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S"
-        - status: "failed"
+        - status: "error"
           error: "failed to load model"
       properties:
         model:
@@ -192,7 +192,7 @@ components:
           type: string
           description: Status of the LLM loaded by Kobold
           example: online
-          enum: ["offline", "loading", "online", "stopping", "failed"]
+          enum: ["offline", "loading", "online", "stopping", "error"]
         error:
           type: string
           example: SIGTERM
