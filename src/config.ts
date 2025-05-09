@@ -31,7 +31,7 @@ const readConfig = (): Config => {
             fs.writeFileSync(configPath, JSON.stringify(defaultConfig, undefined, "  "))
 
             globalThis.console.log(chalk.red(MODULE_NAME),
-                `Configuration missing. Configuration template created at ${  configPath}`);
+                `Configuration missing. Configuration template created at ${configPath}`);
 
             return readConfig()
         }
