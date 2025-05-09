@@ -14,6 +14,6 @@ export class RequestValidationError extends Error {
 
 export class ConfigurationError extends Error {
     constructor(msg: string) {
-        super("Configuration error: " + msg)
+        super(`Configuration error: ${  msg}`)
     }
 }
