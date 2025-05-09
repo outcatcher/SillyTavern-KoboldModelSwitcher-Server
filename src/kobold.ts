@@ -147,8 +147,6 @@ export class Controller extends EventEmitter {
         this.
             waitForOneOfModelStates(['online', 'offline', 'error'], modelStartupTimeoutMs)
             .then(state => {
-                console.warn('Set state after wait', state)
-
                 this.setState(state)
             })
             .catch((err: unknown) => {
