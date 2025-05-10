@@ -39,11 +39,11 @@ export const LOG_LEVELS = {
     ERROR: 3,
 }
 
-export type ModelState = 'offline' | 'loading' | 'online' | 'stopping' | 'error'
+export type ModelState = 'offline' | 'load' | 'reload' | 'online' | 'stop' | 'error'
+export type KoboldState = 'offline' | 'online'
 
 
-export const isModelChangingState = (state: ModelState): boolean => ['loading', 'stopping'].includes(state),
-    isModelOffline = (state: ModelState): boolean => ['offline', 'stopping', 'error'].includes(state)
+export const isModelChangingState = (state: ModelState): boolean => ['load', 'reload', 'stop'].includes(state)
 
 export const binaryRelativePathMap = new Map<string, string>([
     ['win32', './koboldcpp_cu12.exe'],

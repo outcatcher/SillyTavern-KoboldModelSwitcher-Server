@@ -21,7 +21,7 @@ export class Handlers {
 
     getRunningModel: RequestHandler = async (_, res, next) => await this
         .controller
-        .getModelStatus()
+        .getStatus()
         .then(status => {
             const data: getRunningModelResponse = {
                 status: status.State,
