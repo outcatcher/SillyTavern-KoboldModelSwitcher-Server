@@ -4,9 +4,7 @@ import path from 'node:path';
 import { chalk, MODULE_NAME } from './consts';
 import { ConfigurationError } from './errors';
 
-const pluginGitName = 'SillyTavern-KoboldModelSwitcher-Server'
-
-interface Config {
+export interface Config {
     basePath: string
 }
 
@@ -19,13 +17,19 @@ interface FSError {
     path: string
 }
 
-const configPath = path.join(process.cwd(), `./plugins/${pluginGitName}/config.json`)
+const validateConfig = (cfg: Config): Config => {
+    if (!path.isAbsolute(cfg.basePath)) {
+        throw new ConfigurationError(`basePath must be absolute but is ${cfg.basePath}`)
+    }
 
-const readConfig = (): Config => {
+    return cfg
+}
+
+export const loadConfig = (configPath: string): Config => {
     try {
         const configFile = fs.readFileSync(configPath, 'utf8')
 
-        return JSON.parse(configFile.toString()) as Config
+        return validateConfig(JSON.parse(configFile.toString()) as Config)
     } catch (err: unknown) {
         if ((err as FSError).code === 'ENOENT') {
             fs.writeFileSync(configPath, JSON.stringify(defaultConfig, undefined, "  "))
@@ -33,19 +37,10 @@ const readConfig = (): Config => {
             globalThis.console.log(chalk.red(MODULE_NAME),
                 `Configuration missing. Configuration template created at ${configPath}`);
 
-            return readConfig()
+            // Noch einmal
+            return loadConfig(configPath)
         }
 
         throw err
     }
 }
-
-const validateConfig = (cfg: Config): Config => {
-    if (!path.isAbsolute(cfg.basePath)) {
-        throw new ConfigurationError('basePath must be absolute')
-    }
-
-    return cfg
-}
-
-export const config = validateConfig(readConfig())

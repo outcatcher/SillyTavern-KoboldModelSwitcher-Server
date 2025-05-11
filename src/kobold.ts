@@ -4,11 +4,11 @@ import { availableParallelism } from 'os';
 import path from 'path';
 import sanitize from 'sanitize-filename';
 
-import { config } from './config';
+import { Config, loadConfig } from './config';
 import { allowedContextSizes, chalk, knownKoboldRC, LOG_LEVELS, ModelState, MODULE_NAME } from './consts';
 import { ModelStateError } from './errors';
 import { logStream } from './logging';
-import { sleep, timeout } from './timers';
+import { waitFor } from './timers';
 
 const
     binaryRelativePathMap = new Map<string, string>([
@@ -76,9 +76,13 @@ export class Controller {
     private processIO: ChildProcess | null = null
 
     private modelStatus: ModelStatus
+    private config: Config
 
-    constructor() {
+    constructor(configPath: string) {
+        globalThis.console.info('Config loaded from', configPath)
+
         this.modelStatus = { State: 'offline', Independent: false }
+        this.config = loadConfig(configPath)
     }
 
     // Shutdown intiated by Controller
@@ -90,7 +94,7 @@ export class Controller {
     runKoboldCpp(args: KoboldCppArgs) {
         const binaryRelativePath = binaryRelativePathMap.get(process.platform)
 
-        if (binaryRelativePath === undefined || !existsSync(path.join(config.basePath, binaryRelativePath))) {
+        if (binaryRelativePath === undefined || !existsSync(path.join(this.config.basePath, binaryRelativePath))) {
             throw new Error('binary missing')
         }
 
@@ -105,7 +109,7 @@ export class Controller {
             binaryRelativePath,
             toArgsArray(args),
             {
-                cwd: config.basePath,
+                cwd: this.config.basePath,
                 detached: true,
                 signal: this.aborter.signal,
                 stdio: ['ignore', 'pipe', 'pipe'],
@@ -217,24 +221,13 @@ export class Controller {
 
     async waitForOneOfModelStates(states: ModelState[], timeoutMs: number) {
         const waitItervalMs = 200
-
-        const waitForModel = async () => {
+        const modelInState = async () => {
             const currentState = (await this.getModelStatus()).State
 
-            if (states.includes(currentState)) {
-                return
-            }
-
-            // Sleep x_x
-            await sleep(waitItervalMs)
-
-            await waitForModel()
+            return states.includes(currentState)
         }
 
-        await Promise.race([
-            waitForModel(),
-            timeout(timeoutMs),
-        ])
+        await waitFor(modelInState, timeoutMs, waitItervalMs)
     }
 
     // End of controller workflow
