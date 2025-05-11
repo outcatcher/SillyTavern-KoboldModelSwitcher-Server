@@ -18,10 +18,12 @@ const modelURL = '/model'
 //  2. KoboldCpp download + unpacking
 
 const expectedModelData = {
-    model: 'Qwen3-0.6B-UD-IQ1_S.gguf', // 205Mb
+    // 205Mb
+    model: 'Qwen3-0.6B-UD-IQ1_S.gguf',
 }
 
-const secondModelname = 'Qwen3-0.6B-UD-IQ1_M.gguf' // 211Mb
+// 211Mb
+const secondModelname = 'Qwen3-0.6B-UD-IQ1_M.gguf'
 
 const waitIntervalStart = 3000,
     waitTimeoutStart = 60000

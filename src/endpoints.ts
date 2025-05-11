@@ -6,6 +6,8 @@ import { ModelState } from './consts';
 import { RequestValidationError } from './errors';
 import { Controller, KoboldCppArgs } from './kobold';
 
+const fiveSeconds = 5000
+
 interface getRunningModelResponse {
     status: ModelState
     model?: string
@@ -43,8 +45,6 @@ export class Handlers {
             next(new RequestValidationError(errMsg)); return;
         }
 
-        const fiveSeconds = 5000
-
         await this
             .controller
             .stopKoboldCpp()
@@ -60,9 +60,10 @@ export class Handlers {
         .then(() => res.status(StatusCodes.NO_CONTENT).send())
         .catch(next)
 
-    static openApiYaml: RequestHandler = (_, res) =>
-        { res.
-            sendFile('openapi.yaml', { root: `${__dirname}/..` }); };
+    static openApiYaml: RequestHandler = (_, res) => {
+        res.
+            sendFile('openapi.yaml', { root: `${__dirname}/..` });
+    };
 
 
     static redoc: RequestHandler = (req, res) =>
