@@ -1,3 +1,5 @@
+/*eslint max-lines-per-function: "off"*/
+
 import bodyParser from 'body-parser'
 import express from 'express'
 import { StatusCodes } from 'http-status-codes'

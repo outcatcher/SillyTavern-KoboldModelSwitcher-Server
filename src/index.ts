@@ -2,6 +2,7 @@ import path from 'node:path';
 import { env } from 'node:process';
 
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { checkSchema } from 'express-validator';
 import { StatusCodes } from 'http-status-codes';
 
@@ -29,6 +30,13 @@ const configPath = (() => {
     return path.join(process.cwd(), `./plugins/${pluginGitName}/config.json`)
 })()
 
+const limiter = rateLimit({
+    // eslint-disable-next-line no-magic-numbers
+    windowMs: 15 * 60 * 1000,
+     
+    max: 100,
+});
+
 
 class KoboldRunnerPlugin {
     info: PluginInfo = {
@@ -53,7 +61,7 @@ class KoboldRunnerPlugin {
         pluginRouter.get('/probe', (_, res) => res.status(StatusCodes.NO_CONTENT).send());
         // Doc
         pluginRouter.get('/redoc', Handlers.redoc)
-        pluginRouter.get('/openapi.yaml', Handlers.openApiYaml)
+        pluginRouter.get('/openapi.yaml', limiter, Handlers.openApiYaml)
         // Models
         pluginRouter.get('/model', handlers.getRunningModel);
         pluginRouter.put('/model', checkSchema(modelSchema, ['body']), handlers.postModel);
