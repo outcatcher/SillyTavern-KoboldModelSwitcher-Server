@@ -1,5 +1,9 @@
 /*eslint max-lines-per-function: "off"*/
 
+import fs from 'node:fs'
+import { mkdir, writeFile } from 'node:fs/promises'
+import path from 'node:path'
+
 import bodyParser from 'body-parser'
 import express from 'express'
 import { StatusCodes } from 'http-status-codes'
@@ -12,20 +16,23 @@ import { waitFor } from '../src/timers'
 const app = express()
 app.use(bodyParser.json());
 
-const modelURL = '/model'
+const modelURI = '/model'
 
 // CURRENT TEST IMPLEMENTATION IS TO BE RUN LOCALLY
 // To be set up for CI:
 //  1. Some tiny LLM
 //  2. KoboldCpp download + unpacking
 
+const modelDir = './llms'
+
+const modelFilename = 'all-MiniLM-L6-v2-Q2_K.gguf'
+
 const expectedModelData = {
-    // 205Mb
-    model: 'Qwen3-0.6B-UD-IQ1_S.gguf',
+    // 19.2Mb
+    model: path.resolve(path.join(modelDir, modelFilename)),
 }
 
-// 211Mb
-const secondModelname = 'Qwen3-0.6B-UD-IQ1_M.gguf'
+const secondModelname = `copy_${modelFilename}`
 
 const waitIntervalStart = 3000,
     waitTimeoutStart = 60000
@@ -33,10 +40,38 @@ const waitIntervalStart = 3000,
 const waitIntervalStop = 100,
     waitTimeoutStop = 5000
 
+const downloadTestLLMs = async () => {
+    const fullPath1 = path.join(modelDir, modelFilename),
+        fullPath2 = path.join(modelDir, secondModelname)
+
+    if (fs.existsSync(fullPath1) && fs.existsSync(fullPath2)) {
+        return
+    }
+
+    await mkdir(modelDir, { recursive: true })
+
+    // Hotlinking, but will suffice for time being
+    const modelURL =
+        'https://huggingface.co/second-state/All-MiniLM-L6-v2-Embedding-GGUF'
+        +
+        `/resolve/main/${modelFilename}?download=true`
+
+    await fetch(modelURL)
+        .then(stream => stream.arrayBuffer())
+        .then(async buffer => {
+            await Promise.all([
+                writeFile(fullPath1, Buffer.from(buffer)),
+                writeFile(fullPath2, Buffer.from(buffer))
+            ])
+        })
+}
+
 describe('Test Plugin workflow', () => {
-    before(() => {
+    before(async () => {
         plugin.init(app)
-    });
+
+        await downloadTestLLMs()
+    }).timeout(waitTimeoutStart)
 
     // Yes, tests are dependant. What now?
 
@@ -49,7 +84,7 @@ describe('Test Plugin workflow', () => {
 
     it('Check model offline', done => {
         request(app)
-            .get(modelURL)
+            .get(modelURI)
             .expect(StatusCodes.OK, {
                 status: 'offline'
             })
@@ -58,7 +93,7 @@ describe('Test Plugin workflow', () => {
 
     it('Initial LLM loading', done => {
         request(app)
-            .put(modelURL)
+            .put(modelURI)
             .send(expectedModelData)
             .set('Content-Type', 'application/json')
             .expect(StatusCodes.CREATED, (err, resp) => {
@@ -73,7 +108,7 @@ describe('Test Plugin workflow', () => {
     it('Wait for loading', async () => {
         await waitFor(
             async () => await request(app)
-                .get(modelURL)
+                .get(modelURI)
                 .expect(StatusCodes.OK)
                 .expect((resp) => {
                     const body = resp.body as { status: string }
@@ -91,8 +126,8 @@ describe('Test Plugin workflow', () => {
 
     it('Restart model', done => {
         request(app)
-            .put(modelURL)
-            .send({ model: secondModelname })
+            .put(modelURI)
+            .send({ model: path.resolve(path.join(modelDir, secondModelname)) })
             .set('Content-Type', 'application/json')
             .expect(StatusCodes.CREATED, (err, resp) => {
                 if (!err) { done(); return; }
@@ -106,7 +141,7 @@ describe('Test Plugin workflow', () => {
     it('Wait for loading', async () => {
         await waitFor(
             async () => await request(app)
-                .get(modelURL)
+                .get(modelURI)
                 .expect(StatusCodes.OK)
                 .expect((resp) => {
                     const data = resp.body as { status: string, model: string }
@@ -124,7 +159,7 @@ describe('Test Plugin workflow', () => {
 
     it('Stop model', done => {
         request(app)
-            .delete(modelURL)
+            .delete(modelURI)
             .expect(StatusCodes.NO_CONTENT)
             .end(done)
     })
@@ -132,7 +167,7 @@ describe('Test Plugin workflow', () => {
     it('Wait for stopping', async () => {
         await waitFor(
             async () => await request(app)
-                .get(modelURL)
+                .get(modelURI)
                 .expect(StatusCodes.OK)
                 .expect((resp) => {
                     if ((resp.body as { status: string }).status === 'online') {
@@ -149,7 +184,7 @@ describe('Test Plugin workflow', () => {
     after(() => {
         plugin.exit()
     })
-})
+}).bail(true)
 
 interface koboldCppArgsErr {
     model?: unknown
@@ -163,8 +198,10 @@ interface koboldCppArgsErr {
 }
 
 describe('Test plugin errors', () => {
-    before(() => {
+    before(async () => {
         plugin.init(app)
+
+        await downloadTestLLMs()
     });
 
     after(() => {
@@ -180,7 +217,7 @@ describe('Test plugin errors', () => {
             { name: 'negative gpuLayers', model: expectedModelData.model, gpuLayers: -1, errorText: 'gpuLayers must be positive integer' },
             { name: 'float gpuLayers', model: expectedModelData.model, gpuLayers: 1.5, errorText: 'gpuLayers must be positive integer' },
             { name: 'non-number threads', model: expectedModelData.model, threads: 'lol', errorText: 'threads must be positive integer' },
-            { name: 'negative threads', model: expectedModelData.model, threads: -1, errorText: 'threads must be positive integer' },
+            { name: 'negative threads', model: expectedModelData.model, threads: -2, errorText: 'threads must be positive integer' },
             { name: 'float threads', model: expectedModelData.model, threads: 1.5, errorText: 'threads must be positive integer' },
             { name: 'tensorSplit not array', model: expectedModelData.model, tensorSplit: -1, errorText: 'tensorSplit must be float array with minimal length of two' },
             { name: 'tensorSplit size in 1', model: expectedModelData.model, tensorSplit: [1], errorText: 'tensorSplit must be float array with minimal length of two' },
@@ -192,7 +229,7 @@ describe('Test plugin errors', () => {
                 const args = { ...test, name: undefined, errorText: undefined }
 
                 request(app)
-                    .put(modelURL)
+                    .put(modelURI)
                     .send(args)
                     .set('Content-Type', 'application/json')
                     .expect(StatusCodes.BAD_REQUEST)
@@ -204,7 +241,7 @@ describe('Test plugin errors', () => {
     describe('Try re-create or delete model in loading state', () => {
         it('Initial LLM loading', done => {
             request(app)
-                .put(modelURL)
+                .put(modelURI)
                 .send(expectedModelData)
                 .set('Content-Type', 'application/json')
                 .expect(StatusCodes.CREATED)
@@ -215,7 +252,7 @@ describe('Test plugin errors', () => {
 
         it('Re-create running LLM', done => {
             request(app)
-                .put(modelURL)
+                .put(modelURI)
                 .send(expectedModelData)
                 .set('Content-Type', 'application/json')
                 .expect(StatusCodes.CONFLICT)
@@ -226,7 +263,7 @@ describe('Test plugin errors', () => {
 
         it('Delete running LLM', done => {
             request(app)
-                .delete(modelURL)
+                .delete(modelURI)
                 .expect(StatusCodes.CONFLICT)
                 .end(done)
         })

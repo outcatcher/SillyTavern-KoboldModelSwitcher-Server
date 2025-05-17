@@ -35,7 +35,9 @@ export class Handlers {
         })
         .catch(next)
 
-    postModel: RequestHandler = async (req, res, next) => {
+    putModel: RequestHandler = async (req, res, next) => {
+        globalThis.console.info('body:', req.body)
+
         const result = validationResult(req);
         if (!result.isEmpty()) {
             const errMsg = result

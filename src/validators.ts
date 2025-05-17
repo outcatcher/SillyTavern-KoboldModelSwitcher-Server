@@ -1,4 +1,9 @@
+import { normalize } from 'node:path';
+
+import { Schema } from 'express-validator';
+
 import { allowedContextSizes } from './consts';
+
 
 //  {
 //    "contextSize": 12288,
@@ -7,7 +12,7 @@ import { allowedContextSizes } from './consts';
 //    "threads": 1,
 //    "tensorSplit": [29, 52],
 //  }
-export const modelSchema = {
+export const modelSchema: Schema = {
     contextSize: {
         optional: true,
         isIn: {
@@ -49,9 +54,9 @@ export const modelSchema = {
     threads: {
         optional: true,
         isInt: {
-            errorMessage: 'threads must be positive integer',
+            errorMessage: 'threads must be >= -1',
             options: {
-                min: 0,
+                min: -1,
             },
         },
     },

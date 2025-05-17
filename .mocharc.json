@@ -3,6 +3,7 @@
     "extension": [
         "ts"
     ],
-    "spec": "test/**/*.ts",
-    "bail": true
+    "color": true,
+    "recursive": true,
+    "exit": true
 }
