@@ -23,7 +23,6 @@
     "homepage": "https://github.com/outcatcher/SillyTavern-KoboldModelSwitcher-Server#readme",
     "devDependencies": {
         "@eslint/js": "^9.26.0",
-        "@istanbuljs/nyc-config-typescript": "^1.0.2",
         "@stylistic/eslint-plugin": "^4.2.0",
         "@stylistic/eslint-plugin-js": "^4.2.0",
         "@stylistic/eslint-plugin-ts": "^4.2.0",

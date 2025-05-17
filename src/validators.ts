@@ -1,5 +1,3 @@
-import { normalize } from 'node:path';
-
 import { Schema } from 'express-validator';
 
 import { allowedContextSizes } from './consts';
