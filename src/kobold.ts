@@ -2,7 +2,6 @@ import { ChildProcess, spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { availableParallelism } from 'os';
 import path from 'path';
-import sanitize from 'sanitize-filename';
 
 import { Config, loadConfig } from './config';
 import { allowedContextSizes, chalk, knownKoboldRC, LOG_LEVELS, ModelState, MODULE_NAME } from './consts';
@@ -32,7 +31,7 @@ const defaultArgs = ['--quiet', '--flashattention', '--usemlock', '--usecublas',
 
 const toArgsArray = (args: KoboldCppArgs): string[] => {
     const execArgs = defaultArgs.concat(
-        '--model', sanitize(args.model),
+        '--model', args.model,
         '--threads', (args.threads ?? availableParallelism()).toString(),
     )
 
@@ -113,6 +112,7 @@ export class Controller {
                 detached: true,
                 signal: this.aborter.signal,
                 stdio: ['ignore', 'pipe', 'pipe'],
+                // Never ever add 'shell: true', simple passed ';' in model name will give access to your file system.
             })
             .on('error', this.handleChildErr)
             .on('exit', this.handleChildExit)
@@ -122,7 +122,7 @@ export class Controller {
 
         const modelName = args.model.substring(0, args.model.lastIndexOf('.'))
 
-        this.modelStatus = { Name: modelName, State: 'loading', Independent: false }
+        this.modelStatus = { Name: path.basename(modelName, '.gguf'), State: 'loading', Independent: false }
     }
 
     private handleChildErr = (err: Error) => {
@@ -220,7 +220,7 @@ export class Controller {
     }
 
     async waitForOneOfModelStates(states: ModelState[], timeoutMs: number) {
-        const waitItervalMs = 200
+        const waitItervalMs = 100
         const modelInState = async () => {
             const currentState = (await this.getModelStatus()).State
 

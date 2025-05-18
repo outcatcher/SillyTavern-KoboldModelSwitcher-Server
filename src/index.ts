@@ -6,12 +6,12 @@ import rateLimit from 'express-rate-limit';
 import { checkSchema } from 'express-validator';
 import { StatusCodes } from 'http-status-codes';
 
+import { version } from '../package.json'
 import { chalk, MODULE_NAME } from './consts';
 import { Handlers } from './endpoints';
 import { Controller } from './kobold';
 import { handleErrors, logRequest } from './middlewares';
 import { modelSchema } from './validators';
-
 
 interface PluginInfo {
     id: string;
@@ -33,10 +33,9 @@ const configPath = (() => {
 const limiter = rateLimit({
     // eslint-disable-next-line no-magic-numbers
     windowMs: 15 * 60 * 1000,
-     
+
     max: 100,
 });
-
 
 class KoboldRunnerPlugin {
     info: PluginInfo = {
@@ -64,18 +63,18 @@ class KoboldRunnerPlugin {
         pluginRouter.get('/openapi.yaml', limiter, Handlers.openApiYaml)
         // Models
         pluginRouter.get('/model', handlers.getRunningModel);
-        pluginRouter.put('/model', checkSchema(modelSchema, ['body']), handlers.postModel);
+        pluginRouter.put('/model', checkSchema(modelSchema, ['body']), handlers.putModel);
         pluginRouter.delete('/model', handlers.deleteModel);
 
         pluginRouter.use(handleErrors)
 
-        globalThis.console.log(chalk.green(MODULE_NAME), 'Plugin loaded!');
+        globalThis.console.log(chalk.green(MODULE_NAME), `Plugin version ${version} loaded!`);
     }
 
     exit = () => {
         this.controller.shutdown()
 
-        globalThis.console.log(chalk.yellow(MODULE_NAME), 'Plugin exited');
+        globalThis.console.log(chalk.yellow(MODULE_NAME), `Plugin version ${version} exited`);
     }
 }
 
