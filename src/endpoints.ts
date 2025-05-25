@@ -21,6 +21,12 @@ export class Handlers {
         this.controller = controller
     }
 
+    getModels: RequestHandler = async (_, res, next) => await this
+        .controller
+        .listGGUFModels()
+        .then(models => res.json({ models }))
+        .catch(next)
+
     getRunningModel: RequestHandler = async (_, res, next) => await this
         .controller
         .getModelStatus()

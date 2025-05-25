@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: "KoboldCPP Model Switcher"
-  version: 0.2.0-pre.4
+  version: 0.2.1-pre.1
 paths:
   /probe:
     get:
@@ -19,6 +19,19 @@ paths:
           description: Returns ReDoc for plugin API
       tags:
         - Plugin info
+  /models:
+    get:
+      summary: List available models
+      description: Returns list of models in base directory
+      responses:
+        "200":
+          description: List of existing GGUF models under base directory
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/modelList"
+      tags:
+        - Model Operations
   /model:
     get:
       summary: Get model status
@@ -175,6 +188,22 @@ components:
           "threads": 1,
           "tensorSplit": [29, 52],
         }
+    modelList:
+      type: object
+      description: Info about available models
+      example:
+        models:
+          - Llama-3.1-8B-UltraLong-1M-Instruct.f16.gguf
+          - Mistral-Small-3.1-24B-Instruct-2503-UD-Q6_K_XL.gguf
+          - PocketDoc_Dans-PersonalityEngine-V1.2.0-24b-Q6_K_L.gguf
+      properties:
+        models:
+          description: List of .gguf file names
+          type: array
+          items:
+            type: string
+      required:
+        - models
     modelInfo:
       type: object
       description: Info about currently running model

@@ -1,5 +1,6 @@
 import { ChildProcess, spawn } from 'child_process';
 import { existsSync } from 'fs';
+import { readdir } from 'fs/promises';
 import { availableParallelism } from 'os';
 import path from 'path';
 
@@ -230,9 +231,20 @@ export class Controller {
         await waitFor(modelInState, timeoutMs, waitItervalMs)
     }
 
+    async listGGUFModels() {
+        return await readdir(this.config.basePath, {
+            encoding: 'utf8',
+            recursive: false,
+            withFileTypes: true,
+        })
+            .then(entities => entities
+                .filter(entity => entity.isFile() && entity.name.endsWith('.gguf'))
+                .map(entity => entity.name)
+            )
+    }
+
     // End of controller workflow
     shutdown() {
         this.aborter?.abort()
     }
 }
-
