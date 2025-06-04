@@ -5,7 +5,7 @@ import { availableParallelism } from 'os';
 import path from 'path';
 
 import { Config, loadConfig } from './config';
-import { allowedContextSizes, chalk, knownKoboldRC, LOG_LEVELS, ModelState, MODULE_NAME } from './consts';
+import { chalk, knownKoboldRC, LOG_LEVELS, maxAllowedContextSize, minAllowedContextSize, ModelState, MODULE_NAME } from './consts';
 import { ModelStateError } from './errors';
 import { logStream } from './logging';
 import { waitFor } from './timers';
@@ -37,7 +37,7 @@ const toArgsArray = (args: KoboldCppArgs): string[] => {
     )
 
     if (args.contextSize !== undefined) {
-        if (!allowedContextSizes.includes(args.contextSize)) {
+        if ((args.contextSize > maxAllowedContextSize) || (args.contextSize < minAllowedContextSize)) {
             throw new Error('unsupported context size')
         }
 

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: "KoboldCPP Model Switcher"
-  version: 0.2.2
+  version: 0.2.3
 servers:
   - url: http://localhost:8000/api/plugins/kobold-switcher
 paths:
@@ -121,7 +121,7 @@ components:
         - errors
       example:
         errors:
-          - "contextSize must be one of [256, 512, 1024, 2048, 3072, 4096, 6144, 8192, 10240, 12288, 14336, 16384, 20480, 24576, 28672, 32768, 40960, 49152, 57344, 65536, 81920, 98304, 114688, 131072]"
+          - "contextSize must in range [256 to 262144]"
           - "gpuLayers must be positive integer"
           - "model is required"
           - "tensorSplit must be float array with minimal length of two"
@@ -135,46 +135,28 @@ components:
           description: Relative path to the model GGUF file to be run
           example: nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S.gguf
         contextSize:
+          description: Size of allocated context
           type: number
-          enum:
-            - 256
-            - 512
-            - 1024
-            - 2048
-            - 3072
-            - 4096
-            - 6144
-            - 8192
-            - 10240
-            - 12288
-            - 14336
-            - 16384
-            - 20480
-            - 24576
-            - 28672
-            - 32768
-            - 40960
-            - 49152
-            - 57344
-            - 65536
-            - 81920
-            - 98304
-            - 114688
-            - 131072
+          minimum: 256
+          maximum: 262144
+          example: 12288
         gpuLayers:
           type: number
-          description: Number of layers to offload to GPU
-          example: 12288
+          description: Number of layers to offload to GPU. Set to -1 to try autodetect, set to 0 to disable GPU offload.
+          example: 81
+          minimum: -1
         threads:
           type: number
           description: Threads to be used on CPU (1 is enough if model is fully offloaded to GPU)
-          example: 81
+          example: 1
+          minimum: -1
         tensorSplit:
           type: array
           description: Tensor split for multi-GPU setups
           example: [29, 52]
           items:
             type: number
+            format: float
       required:
         - model
       example:

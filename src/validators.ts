@@ -1,6 +1,6 @@
 import { Schema } from 'express-validator';
 
-import { allowedContextSizes } from './consts';
+import { maxAllowedContextSize, minAllowedContextSize } from './consts';
 
 
 //  {
@@ -13,9 +13,12 @@ import { allowedContextSizes } from './consts';
 export const modelSchema: Schema = {
     contextSize: {
         optional: true,
-        isIn: {
-            errorMessage: `contextSize must be one of [${allowedContextSizes.join(', ')}]`,
-            options: [allowedContextSizes],
+        isInt: {
+            errorMessage: `contextSize must be in range [${minAllowedContextSize.toString()} to ${maxAllowedContextSize.toString()}]`,
+            options: {
+                min: minAllowedContextSize,
+                max: maxAllowedContextSize,
+            }
         },
     },
     gpuLayers: {
@@ -23,7 +26,7 @@ export const modelSchema: Schema = {
         isInt: {
             errorMessage: 'gpuLayers must be positive integer',
             options: {
-                min: 0,
+                min: 1,
             },
         },
     },

@@ -212,7 +212,7 @@ describe('Test plugin errors', () => {
         const tests: koboldCppArgsErr[] = [
             { name: 'missing model', errorText: 'model is required' },
             { name: 'empty model', model: '', errorText: 'model is required' },
-            { name: 'invalid contextSize', model: expectedModelData.model, contextSize: 500, errorText: 'contextSize must be one of.+' },
+            { name: 'invalid contextSize', model: expectedModelData.model, contextSize: 200, errorText: 'contextSize must be in range.+' },
             { name: 'non-number gpuLayers', model: expectedModelData.model, gpuLayers: 'lol', errorText: 'gpuLayers must be positive integer' },
             { name: 'negative gpuLayers', model: expectedModelData.model, gpuLayers: -1, errorText: 'gpuLayers must be positive integer' },
             { name: 'float gpuLayers', model: expectedModelData.model, gpuLayers: 1.5, errorText: 'gpuLayers must be positive integer' },
