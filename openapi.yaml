@@ -2,6 +2,8 @@ openapi: 3.1.0
 info:
   title: "KoboldCPP Model Switcher"
   version: 0.2.1
+servers:
+  - url: http://localhost:8000/api/plugins/kobold-switcher
 paths:
   /probe:
     get:
@@ -132,10 +134,6 @@ components:
           type: string
           description: Relative path to the model GGUF file to be run
           example: nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S.gguf
-        binaryPath:
-          type: string
-          description: Relative path to koboldcpp executable (now ignored)
-          example: koboldcpp-linux-x64-cuda1210
         contextSize:
           type: number
           enum:
@@ -181,7 +179,6 @@ components:
         - model
       example:
         {
-          "binaryPath": "koboldcpp-linux-x64-cuda1210",
           "contextSize": 12288,
           "gpuLayers": 81,
           "model": "nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S.gguf",
