@@ -1,6 +1,6 @@
 {
     "name": "sillytavern-koboldmodelswitcher-server",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "description": "SillyTavern pluign for switching koboldcpp models",
     "main": "dist/plugin.js",
     "type": "commonjs",
