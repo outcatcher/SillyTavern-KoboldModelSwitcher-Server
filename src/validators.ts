@@ -24,9 +24,9 @@ export const modelSchema: Schema = {
     gpuLayers: {
         optional: true,
         isInt: {
-            errorMessage: 'gpuLayers must be positive integer',
+            errorMessage: 'gpuLayers must be >= -1',
             options: {
-                min: 1,
+                min: -1,
             },
         },
     },
