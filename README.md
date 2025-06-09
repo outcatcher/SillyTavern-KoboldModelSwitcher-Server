@@ -62,6 +62,21 @@ If not specified, default values will be used (see KoboldCpp help for details).
 - `--usecublas`
 - `all`
 
+### `basePath` **DEPRECATED**
+
+This option is deprecated and will be removed in future versions (0.3+)
+
+Defines base directory for both KoboldCpp binary and models.
+Is a fallback for `koboldBinary` and `modelsDir` if they are not set.
+
+If set, KoboldCpp binary for execution is chosen depending on OS (`process.platform`):
+
+| `process.platform` | path                                       |
+| ------------------ | ------------------------------------------ |
+| `linux`            | `${basePath}/koboldcpp-linux-x64-cuda1210` |
+| `darwin`           | `${basePath}/koboldcpp-mac-arm64`          |
+| `win32`            | `${basePath}\koboldcpp_cu12.exe`           |
+
 ## API documentation
 
 Model operations include:

@@ -33,6 +33,7 @@ interface FSError {
     path: string
 }
 
+// Validating configuration after loading. As data is loaded from JSON, we have to check of undefined values.
 const validateConfig = (cfg: Config): Config => {
     // Legacy config
     if (cfg.basePath !== undefined) {
@@ -40,10 +41,10 @@ const validateConfig = (cfg: Config): Config => {
             throw new ConfigurationError(`basePath must be absolute if defined but is ${cfg.basePath}`)
         }
 
-        cfg.modelsDir = cfg.modelsDir === ''
+        cfg.modelsDir = cfg.modelsDir
             ? cfg.modelsDir
             : cfg.basePath
-        cfg.koboldBinary = cfg.koboldBinary === ''
+        cfg.koboldBinary = cfg.koboldBinary
             ? cfg.koboldBinary
             : path.join(cfg.basePath, defaultKoboldExecutables.get(process.platform) ?? defaultFallbackBinary)
 
@@ -53,15 +54,14 @@ const validateConfig = (cfg: Config): Config => {
         )
     }
 
-    if (!path.isAbsolute(cfg.modelsDir)) {
-        throw new ConfigurationError(`modelsDir must be absolute if defined but is ${cfg.modelsDir}`)
+    if (cfg.modelsDir === undefined || !path.isAbsolute(cfg.modelsDir)) {
+        throw new ConfigurationError(`modelsDir must be absolute but is ${cfg.modelsDir}`)
     }
 
     if (cfg.koboldBinary === undefined || cfg.koboldBinary === '') {
         cfg.koboldBinary = defaultConfig.koboldBinary
     }
 
-    // Can be undefined after load
     cfg.defaultArgs ??= defaultConfig.defaultArgs
 
     return cfg
