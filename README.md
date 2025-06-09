@@ -23,13 +23,53 @@ Example:
 
 ```json
 {
-  "basePath": "/e/ll_models"
+  "modelsDir": "/e/ll_models",
+  "koboldBinary": "koboldcpp-linux-x64-cuda1210",
+  "defaultArgs": [
+    "--quiet",
+    "--flashattention",
+    "--usemlock",
+    "--usecublas",
+    "0"
+  ]
 }
 ```
 
-### `basePath`
+### `modelsDir`
 
-Kobold binary for execution chosen depending on OS (`process.platform`):
+Path to directory with models to be used by KoboldCpp.
+
+### `koboldBinary`
+
+Path to KoboldCpp binary. Can be either absolute path to binary or executable in `$PATH`.
+
+Following table shows default binary names to be searched in `$PATH` for different platforms if not set:
+
+| `process.platform` | path                           |
+| ------------------ | ------------------------------ |
+| `linux`            | `koboldcpp-linux-x64-cuda1210` |
+| `darwin`           | `koboldcpp-mac-arm64`          |
+| `win32`            | `koboldcpp_cu12.exe`           |
+
+### `defaultArgs`
+
+Default arguments passed to KoboldCpp binary on each execution.
+If not specified, default values will be used (see KoboldCpp help for details).
+
+- `--quiet`
+- `--flashattention`
+- `--usemlock`
+- `--usecublas`
+- `all`
+
+### `basePath` **DEPRECATED**
+
+This option is deprecated and will be removed in future versions (0.3+)
+
+Defines base directory for both KoboldCpp binary and models.
+Is a fallback for `koboldBinary` and `modelsDir` if they are not set.
+
+If set, KoboldCpp binary for execution is chosen depending on OS (`process.platform`):
 
 | `process.platform` | path                                       |
 | ------------------ | ------------------------------------------ |
@@ -41,20 +81,22 @@ Kobold binary for execution chosen depending on OS (`process.platform`):
 
 Model operations include:
 
-- `GET /api/plugins/kobold-switcher/models` - listing GGUF models in `basePath` directory
+- `GET /api/plugins/kobold-switcher/models` - listing GGUF models in `modelsDir` directory
 - `GET /api/plugins/kobold-switcher/model`- model currently run by KoboldCpp
 - `PUT /api/plugins/kobold-switcher/model`- starts or restarts KoboldCpp instance with given configuration
 
-    Body example:
-    ```json
-    {
-        "contextSize": 12288,
-        "gpuLayers": 81,
-        "model": "nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S.gguf",
-        "threads": 1,
-        "tensorSplit": [29, 52]
-    }
-    ```
+  Body example:
+
+  ```json
+  {
+    "contextSize": 12288,
+    "gpuLayers": 81,
+    "model": "nvidia_Llama-3_3-Nemotron-Super-49B-v1-Q4_K_S.gguf",
+    "threads": 1,
+    "tensorSplit": [29, 52]
+  }
+  ```
+
 - `DELETE /api/plugins/kobold-switcher/model`- stops currently running KoboldCpp instance (only if started by plugin)
 
 **Complete API documentation available with running ST (open ST main page before opening)
@@ -62,15 +104,15 @@ http://localhost:8000/api/plugins/kobold-switcher/redoc**
 
 ## Known limitations
 
-1. We expect `basePath` to contain both kobold executable and models (for `GET /models` endpoint)
-
-    Will be changed in future to search for executable in PATH first OR/AND make binary path configurable.
+1. `defaultArgs` can contain arguments breaking our work with KoboldCpp.
+    E.g. `--port` will change port KoboldCpp is listening on, but we will still expect it
+    to be available on `localhost:5001`.
 
 ## Security considerations
 
 No arguments passed via API are passed to the shell. \
 All arguments passed to koboldcpp binary are escaped by standard NodeJS measures. \
-Value of `model` contain absolute path or path with parent directory (`..`), potentially allowing koboldcpp to use *any* model in the system.
+Value of `model` contain absolute path or path with parent directory (`..`), potentially allowing koboldcpp to use _any_ model in the system.
 
 ## License
 

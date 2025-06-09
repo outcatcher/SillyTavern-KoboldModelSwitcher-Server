@@ -24,11 +24,11 @@ const pluginGitName = 'SillyTavern-KoboldModelSwitcher-Server'
 // Would be nice to pass config path
 const configPath = (() => {
     if (env.NODE_ENV === 'test') {
-        return './config.json'
+        return env.CONFIG_PATH ?? './config.json'
     }
 
     return path.join(process.cwd(), `./plugins/${pluginGitName}/config.json`)
-})()
+})
 
 const limiter = rateLimit({
     // eslint-disable-next-line no-magic-numbers
@@ -44,7 +44,7 @@ class KoboldRunnerPlugin {
         description: 'A plugin to reload locally running koboldcpp with different flags.',
     };
 
-    controller: Controller = new Controller(configPath)
+    controller?: Controller
 
     /**
     * Initialize the plugin.
@@ -53,6 +53,9 @@ class KoboldRunnerPlugin {
     init = (router: Router) => {
         // JSON parsed by ST base router
         const pluginRouter = router.use(logRequest)
+
+        // Later initialization of controller allows to change CONFIG_PATH before initialization
+        this.controller = new Controller(configPath())
 
         const handlers = new Handlers(this.controller)
 
@@ -73,7 +76,7 @@ class KoboldRunnerPlugin {
     }
 
     exit = () => {
-        this.controller.shutdown()
+        this.controller?.shutdown()
 
         globalThis.console.log(chalk.yellow(MODULE_NAME), `Plugin version ${version} exited`);
     }

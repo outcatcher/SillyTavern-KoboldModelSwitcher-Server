@@ -1,5 +1,4 @@
 import { ChildProcess, spawn } from 'child_process';
-import { existsSync } from 'fs';
 import { readdir } from 'fs/promises';
 import { availableParallelism } from 'os';
 import path from 'path';
@@ -10,13 +9,7 @@ import { ModelStateError } from './errors';
 import { logStream } from './logging';
 import { waitFor } from './timers';
 
-const
-    binaryRelativePathMap = new Map<string, string>([
-        ['win32', './koboldcpp_cu12.exe'],
-        ['linux', './koboldcpp-linux-x64-cuda1210'],
-        ['darwin', './koboldcpp-mac-arm64'],
-    ]),
-    koboldAPIEndpoint = 'http://127.0.0.1:5001/api/v1'
+const koboldAPIEndpoint = 'http://127.0.0.1:5001/api/v1'
 
 export interface KoboldCppArgs {
     // BinaryPath will be ignored for now (huuuge security considerations)
@@ -26,36 +19,6 @@ export interface KoboldCppArgs {
     gpuLayers?: number
     threads?: number
     tensorSplit?: number[]
-}
-
-const defaultArgs = ['--quiet', '--flashattention', '--usemlock', '--usecublas', 'all']
-
-const toArgsArray = (args: KoboldCppArgs): string[] => {
-    const execArgs = defaultArgs.concat(
-        '--model', args.model,
-        '--threads', (args.threads ?? availableParallelism()).toString(),
-    )
-
-    if (args.contextSize !== undefined) {
-        if ((args.contextSize > maxAllowedContextSize) || (args.contextSize < minAllowedContextSize)) {
-            throw new Error('unsupported context size')
-        }
-
-        execArgs.push('--contextsize', args.contextSize.toString())
-    }
-
-    if (args.gpuLayers !== undefined) {
-        execArgs.push('--gpulayers', args.gpuLayers.toString())
-    }
-
-    if (args.tensorSplit !== undefined) {
-        execArgs.push('--tensor_split', ...args.tensorSplit.map(String))
-    }
-
-    // Making sure none of execArgs contains spaces
-    execArgs.map((arg) => arg.split(' ')).flat()
-
-    return execArgs
 }
 
 interface ModelStatus {
@@ -79,7 +42,7 @@ export class Controller {
     private config: Config
 
     constructor(configPath: string) {
-        globalThis.console.info('Config loaded from', configPath)
+        globalThis.console.info(chalk.yellow(MODULE_NAME), 'Config loaded from', configPath)
 
         this.modelStatus = { State: 'offline', Independent: false }
         this.config = loadConfig(configPath)
@@ -92,22 +55,19 @@ export class Controller {
 
     // StartKoboldCpp starts koboldcpp executable and wait before it responds.
     runKoboldCpp(args: KoboldCppArgs) {
-        const binaryRelativePath = binaryRelativePathMap.get(process.platform)
-
-        if (binaryRelativePath === undefined || !existsSync(path.join(this.config.basePath, binaryRelativePath))) {
-            throw new Error('binary missing')
+        if (this.config.koboldBinary === '') {
+            throw new Error('KoboldCpp path missing')
         }
 
-        globalThis.console.info(
-            chalk.yellow(MODULE_NAME),
-            'Binary will be started at', binaryRelativePath, 'with flags', args,
-        )
+        if (!path.isAbsolute(args.model)) {
+            args.model = path.resolve(path.join(this.config.modelsDir, args.model))
+        }
 
         this.aborter = new AbortController()
 
         this.processIO = spawn(
-            binaryRelativePath,
-            toArgsArray(args),
+            this.config.koboldBinary,
+            this.toArgsArray(args),
             {
                 cwd: this.config.basePath,
                 detached: true,
@@ -214,6 +174,39 @@ export class Controller {
             });
     }
 
+    private toArgsArray(args: KoboldCppArgs) {
+        const execArgs = this.config.defaultArgs.concat(
+            '--model', args.model,
+            '--threads', (args.threads ?? availableParallelism()).toString(),
+        )
+
+        if (args.contextSize !== undefined) {
+            if ((args.contextSize > maxAllowedContextSize) || (args.contextSize < minAllowedContextSize)) {
+                throw new Error('unsupported context size')
+            }
+
+            execArgs.push('--contextsize', args.contextSize.toString())
+        }
+
+        if (args.gpuLayers !== undefined) {
+            execArgs.push('--gpulayers', args.gpuLayers.toString())
+        }
+
+        if (args.tensorSplit !== undefined) {
+            execArgs.push('--tensor_split', ...args.tensorSplit.map(String))
+        }
+
+        // Making sure none of execArgs contains spaces
+        execArgs.map((arg) => arg.split(' ')).flat()
+
+        globalThis.console.info(
+            chalk.yellow(MODULE_NAME),
+            'Binary will be started at', this.config.koboldBinary, 'with args', execArgs,
+        )
+
+        return execArgs
+    }
+
     async getModelStatus() {
         return await this
             .syncWithKobold()
@@ -232,7 +225,7 @@ export class Controller {
     }
 
     async listGGUFModels() {
-        return await readdir(this.config.basePath, {
+        return await readdir(this.config.modelsDir, {
             encoding: 'utf8',
             recursive: false,
             withFileTypes: true,

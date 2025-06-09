@@ -4,3 +4,4 @@ config.json
 *.gguf
 /out
 /llms
+.env
