@@ -1,17 +1,22 @@
-/*eslint max-lines-per-function: "off"*/
+/*eslint max-lines-per-function: "off", max-lines: "off"*/
 
-import fs from 'node:fs'
-import { mkdir, writeFile } from 'node:fs/promises'
-import path from 'node:path'
+import fs from 'node:fs';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { env } from 'node:process';
 
-import bodyParser from 'body-parser'
-import express from 'express'
-import { StatusCodes } from 'http-status-codes'
-import { it } from 'mocha'
-import request from 'supertest'
+import bodyParser from 'body-parser';
+import { config as dotenvConfig } from 'dotenv';
+import express from 'express';
+import { StatusCodes } from 'http-status-codes';
+import { it } from 'mocha';
+import request from 'supertest';
 
-import plugin from '../src/index'
-import { waitFor } from '../src/timers'
+import { Config } from '../src/config';
+import plugin from '../src/index';
+import { waitFor } from '../src/timers';
+
+dotenvConfig()
 
 const app = express()
 app.use(bodyParser.json());
@@ -23,16 +28,22 @@ const modelURI = '/model'
 //  1. Some tiny LLM
 //  2. KoboldCpp download + unpacking
 
-const modelDir = './llms'
+const modelDir = path.resolve('./llms')
 
 const modelFilename = 'all-MiniLM-L6-v2-Q2_K.gguf'
 
 const expectedModelData = {
     // 19.2Mb
-    model: path.resolve(path.join(modelDir, modelFilename)),
+    model: modelFilename,
 }
 
-const secondModelname = `copy_${modelFilename}`
+const config: Config = {
+    modelsDir: modelDir,
+    koboldBinary: env.KOBOLD_BINARY_PATH ?? '',
+    defaultArgs: ['--quiet', '--flashattention', '--usemlock', '--usecublas', '0'],
+}
+
+const secondModelName = `copy_${modelFilename}`
 
 const waitIntervalStart = 3000,
     waitTimeoutStart = 60000
@@ -40,9 +51,25 @@ const waitIntervalStart = 3000,
 const waitIntervalStop = 100,
     waitTimeoutStop = 5000
 
+const prepareConfig = async () => {
+    const cfgPath = path.join(`/tmp/st-kms-test-${Date.now().toString()}`)
+
+    const jsonData = JSON.stringify(config, undefined, "  ")
+
+    await writeFile(cfgPath, jsonData)
+
+    globalThis.console.info('Saved config', jsonData, 'to file', cfgPath)
+
+    env.CONFIG_PATH = cfgPath
+}
+
+const cleanupConfig = async () => {
+    await rm(env.CONFIG_PATH ?? '')
+}
+
 const downloadTestLLMs = async () => {
     const fullPath1 = path.join(modelDir, modelFilename),
-        fullPath2 = path.join(modelDir, secondModelname)
+        fullPath2 = path.join(modelDir, secondModelName)
 
     if (fs.existsSync(fullPath1) && fs.existsSync(fullPath2)) {
         return
@@ -68,6 +95,8 @@ const downloadTestLLMs = async () => {
 
 describe('Test Plugin workflow', () => {
     before(async () => {
+        await prepareConfig()
+
         plugin.init(app)
 
         await downloadTestLLMs()
@@ -99,7 +128,7 @@ describe('Test Plugin workflow', () => {
             .expect(StatusCodes.CREATED, (err, resp) => {
                 if (!err) { done(); return; }
 
-                globalThis.console.error(resp.body)
+                globalThis.console.error('ERROR RESPONSE:', resp.body)
 
                 done(err)
             })
@@ -113,7 +142,7 @@ describe('Test Plugin workflow', () => {
                 .expect((resp) => {
                     const body = resp.body as { status: string }
                     if (body.status !== 'online') {
-                        throw new Error(`Not online: ${body.status}`)
+                        throw new Error(`Not online: ${body.status} `)
                     }
                 })
                 .then(() => true)
@@ -127,7 +156,7 @@ describe('Test Plugin workflow', () => {
     it('Restart model', done => {
         request(app)
             .put(modelURI)
-            .send({ model: path.resolve(path.join(modelDir, secondModelname)) })
+            .send({ model: secondModelName })
             .set('Content-Type', 'application/json')
             .expect(StatusCodes.CREATED, (err, resp) => {
                 if (!err) { done(); return; }
@@ -146,8 +175,8 @@ describe('Test Plugin workflow', () => {
                 .expect((resp) => {
                     const data = resp.body as { status: string, model: string }
 
-                    if (data.status !== 'online' || (`${data.model}.gguf`) !== secondModelname) {
-                        throw new Error(`Not online: ${data.model} ${data.status}`)
+                    if (data.status !== 'online' || (`${data.model}.gguf`) !== secondModelName) {
+                        throw new Error(`Not online: ${data.model} ${data.status} `)
                     }
                 })
                 .then(() => true)
@@ -181,8 +210,11 @@ describe('Test Plugin workflow', () => {
         );
     }).timeout(waitTimeoutStop)
 
-    after(() => {
+
+    after(async () => {
         plugin.exit()
+
+        await cleanupConfig()
     })
 }).bail(true)
 
@@ -199,13 +231,17 @@ interface koboldCppArgsErr {
 
 describe('Test plugin errors', () => {
     before(async () => {
+        await prepareConfig()
+
         plugin.init(app)
 
         await downloadTestLLMs()
     });
 
-    after(() => {
+    after(async () => {
         plugin.exit()
+
+        await cleanupConfig()
     })
 
     describe('Model creation validation', () => {
